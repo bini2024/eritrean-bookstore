@@ -25,55 +25,81 @@
     a { text-decoration: none; color: inherit; cursor: pointer; }
     header {
       background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-      color: white;
-      padding: 1rem;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      color: white; padding: 1rem;
+      position: sticky; top: 0; z-index: 1000;
+      display: flex; align-items: center; justify-content: space-between;
     }
     header h1 { font-size: 1.75rem; }
     nav ul { list-style: none; display: flex; gap: 1rem; }
-    nav ul li a { font-weight: 700; transition: color 0.3s; }
     nav ul li a:hover { color: var(--accent-color); }
 
     section { padding: 2rem 1rem; max-width: 1200px; margin: auto; }
-    .hero { background: url('/images/hero.jpg') no-repeat center/cover; height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; position: relative; }
+    .hero { background: url('/images/hero.jpg') no-repeat center/cover;
+      height: 60vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center; color: white;
+      position: relative;
+    }
     .hero::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
     .hero h2 { font-size: 2.5rem; margin-bottom: 1rem; z-index: 1; }
-    .cta .buy-button { background: var(--accent-color); color: var(--primary-color); border: none; padding: 0.75rem 1.5rem; border-radius: 5px; font-size: 1rem; cursor: pointer; transition: background 0.3s, transform 0.2s; }
+    .cta { z-index: 1; }
+    .cta .buy-button { background: var(--accent-color); color: var(--primary-color);
+      border: none; padding: 0.75rem 1.5rem; border-radius: 5px; font-size: 1rem;
+      cursor: pointer; transition: background 0.3s, transform 0.2s;
+    }
     .cta .buy-button:hover { background: #ffe066; transform: translateY(-2px); }
 
-    .books-header { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .books-header { display: flex; flex-direction: column; align-items: center;
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
     .books-header h2 { font-size: 2rem; color: var(--primary-color); }
-    .books-header input { width: 100%; max-width: 400px; padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; }
-    .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1.5rem; }
-    .book-card { background: var(--card-bg); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; transition: transform 0.3s, box-shadow 0.3s; }
-    .book-card:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+    .books-header input { width: 100%; max-width: 400px;
+      padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem;
+    }
+    .books-grid { display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1.5rem;
+    }
+    .book-card { background: var(--card-bg); border-radius: 10px; overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .book-card:hover { transform: translateY(-5px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
     .book-card img { width: 100%; height: 250px; object-fit: cover; }
-    .book-card .info { padding: 1rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .book-card .info { padding: 1rem; flex-grow: 1;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
     .info h3 { font-size: 1.1rem; color: var(--primary-color); margin-bottom: 0.5rem; }
     .info p { margin-bottom: 1rem; font-size: 1rem; }
     .info .buy-button { background: var(--primary-color); color: white; }
 
-    .cart { background: var(--card-bg); border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; }
-    .cart .content { padding: 1.5rem; }
-    #cartItems { list-style: none; padding: 0; margin-bottom: 1rem; }
-    #cartItems li { margin-bottom: 0.5rem; }
+    .cart, .about, .contact { background: var(--card-bg); border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 2rem;
+    }
+    .cart .content, .about .content, .contact .content { padding: 1.5rem; }
+    .cart ul { list-style: none; padding: 0; margin-bottom: 1rem; }
+    .cart li { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+    .cart li button { background: transparent; border: none; color: red; cursor: pointer; }
     #checkoutBtn { margin-top: 1rem; }
 
-    .about, .contact { background: var(--card-bg); border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; }
-    .about .content, .contact .content { padding: 1.5rem; }
     .contact-form { display: flex; flex-direction: column; gap: 1rem; }
-    .contact-form input, .contact-form textarea { padding: 0.75rem; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; }
-    .contact-form button { background: var(--primary-color); color: white; padding: 0.75rem; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; transition: background 0.3s; }
+    .contact-form input, .contact-form textarea { padding: 0.75rem;
+      border: 1px solid #ccc; border-radius: 5px; font-size: 1rem;
+    }
+    .contact-form button { background: var(--primary-color); color: white;
+      padding: 0.75rem; border: none; border-radius: 5px; font-size: 1rem;
+      cursor: pointer; transition: background 0.3s;
+    }
     .contact-form button:hover { background: var(--secondary-color); }
 
-    footer { background: var(--primary-color); color: white; text-align: center; padding: 1rem; margin-top: 2rem; }
+    footer { background: var(--primary-color); color: white;
+      text-align: center; padding: 1rem; margin-top: 2rem;
+    }
     .hidden { display: none; }
-    @media (max-width: 600px) { header { flex-direction: column; gap: 0.5rem; } .hero h2 { font-size: 2rem; } }
+    @media (max-width: 600px) {
+      header { flex-direction: column; gap: 0.5rem; }
+      .hero h2 { font-size: 2rem; }
+    }
   </style>
 </head>
 <body>
@@ -81,18 +107,18 @@
     <h1>Eritrean Bookstore</h1>
     <nav>
       <ul>
-        <li><a onclick="navigateTo('home')">Home</a></li>
-        <li><a onclick="navigateTo('books')">Books</a></li>
-        <li><a onclick="navigateTo('cart')">Cart (<span id="cart-count">0</span>)</a></li>
-        <li><a onclick="navigateTo('about')">About</a></li>
-        <li><a onclick="navigateTo('contact')">Contact</a></li>
+        <li><a id="navHome">Home</a></li>
+        <li><a id="navBooks">Books</a></li>
+        <li><a id="navCart">Cart (<span id="cart-count">0</span>)</a></li>
+        <li><a id="navAbout">About</a></li>
+        <li><a id="navContact">Contact</a></li>
       </ul>
     </nav>
   </header>
 
   <section id="home" class="hero">
     <h2>Discover the Best Eritrean Books</h2>
-    <div class="cta"><button class="buy-button" onclick="navigateTo('books')">Shop Now</button></div>
+    <div class="cta"><button id="shopNowBtn" class="buy-button">Shop Now</button></div>
   </section>
 
   <section id="books" class="hidden">
@@ -116,9 +142,7 @@
   <section id="about" class="hidden about">
     <div class="content">
       <h2>About Our Store</h2>
-      <p>At Eritrean Bookstore, we are passionate about preserving and sharing the rich literary heritage of Eritrea. Founded in 2024, we curate a diverse collection of fiction, non-fiction, poetry, and historical works authored by Eritrean writers.</p>
-      <p>Our mission is to connect readers worldwide with stories that celebrate Eritrean culture, history, and perspectives. Each book in our collection is selected for its authenticity and quality.</p>
-      <p>We take pride in exceptional customer service, fast shipping, and a user-friendly shopping experience. Whether you're a lifelong fan of Eritrean literature or just discovering it, we're here to help you find your next great read.</p>
+      <p>At Eritrean Bookstore, we are passionate about preserving and sharing the rich literary heritage of Eritrea...</p>
     </div>
   </section>
 
@@ -140,7 +164,7 @@
   </footer>
 
   <script>
-    // Firebase configuration (your real credentials)
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
       authDomain: "eritrean-bookstore.firebaseapp.com",
@@ -153,135 +177,116 @@
     const db = firebase.firestore();
 
     let allBooks = [];
-    let cart = [];
+    let cart = JSON.parse(localStorage.getItem('cart')||'[]');
 
-    // Cart helpers
-    function loadCart() {
-      const saved = localStorage.getItem('cart');
-      return saved ? JSON.parse(saved) : [];
+    // Navigation handlers
+    const sections = ['home','books','cart','about','contact'];
+    function showSection(id) {
+      sections.forEach(s => document.getElementById(s).classList.toggle('hidden', s!==id));
+      if(id==='books') fetchBooks();
+      if(id==='cart') renderCart();
     }
-    function saveCart() {
-      localStorage.setItem('cart', JSON.stringify(cart));
-    }
-    function updateCartCount() {
-      document.getElementById('cart-count').textContent = cart.length;
-    }
+    document.getElementById('navHome').onclick = () => showSection('home');
+    document.getElementById('navBooks').onclick = () => showSection('books');
+    document.getElementById('navCart').onclick = () => showSection('cart');
+    document.getElementById('navAbout').onclick = () => showSection('about');
+    document.getElementById('navContact').onclick = () => showSection('contact');
+    document.getElementById('shopNowBtn').onclick = () => showSection('books');
+
+    function saveCart() { localStorage.setItem('cart', JSON.stringify(cart)); }
+    function updateCartCount() { document.getElementById('cart-count').textContent = cart.length; }
+
     function renderCart() {
-      const itemsEl = document.getElementById('cartItems');
+      const ul = document.getElementById('cartItems'); ul.innerHTML='';
       const totalEl = document.getElementById('cartTotal');
-      const statusEl = document.getElementById('orderStatus');
-      statusEl.textContent = '';
-      itemsEl.innerHTML = '';
-      if (cart.length === 0) {
-        itemsEl.innerHTML = '<li>Your cart is empty.</li>';
-        totalEl.textContent = '0.00';
-        return;
+      let total=0;
+      if(cart.length===0) {
+        ul.innerHTML = '<li>Your cart is empty.</li>'; totalEl.textContent='0.00'; return;
       }
-      const grouped = cart.reduce((acc, item) => {
-        if (!acc[item.id]) acc[item.id] = {...item, qty: 0};
-        acc[item.id].qty++;
-        return acc;
+      // group by id
+      const grouped = cart.reduce((acc, i) => {
+        acc[i.id] = acc[i.id]||{...i,qty:0}; acc[i.id].qty++; return acc;
       }, {});
-      let total = 0;
-      Object.values(grouped).forEach(item => {
-        total += item.price * item.qty;
+      Object.values(grouped).forEach(item=>{
+        total += item.price*item.qty;
         const li = document.createElement('li');
-        li.textContent = `${item.title} x${item.qty} — $${(item.price*item.qty).toFixed(2)}`;
-        itemsEl.appendChild(li);
+        li.innerHTML = `${item.title} x${item.qty} — $${(item.price*item.qty).toFixed(2)}
+          <button data-id="${item.id}">Remove</button>`;
+        li.querySelector('button').onclick = () => {
+          // remove all of that item
+          cart = cart.filter(ci=>ci.id!==item.id);
+          saveCart(); updateCartCount(); renderCart();
+        };
+        ul.appendChild(li);
       });
       totalEl.textContent = total.toFixed(2);
     }
 
     function addToCart(bookId) {
-      const book = allBooks.find(b => b.id === bookId);
-      if (!book || book.stock <= 0) return;
-      cart.push({id: book.id, title: book.title, price: book.price});
-      saveCart();
-      updateCartCount();
-      renderCart();
+      const book = allBooks.find(b=>b.id===bookId);
+      if(!book || book.stock<=0) return; // no add if out
+      cart.push({id:book.id,title:book.title,price:book.price});
+      saveCart(); updateCartCount();
     }
 
     async function checkout() {
-      if (cart.length === 0) { alert('Your cart is empty.'); return; }
-      const btn = document.getElementById('checkoutBtn');
-      btn.disabled = true;
-      const grouped = cart.reduce((acc, item) => {
-        if (!acc[item.id]) acc[item.id] = {...item, qty:0}; acc[item.id].qty++; return acc;
-      }, {});
-      const items = Object.values(grouped).map(item => ({id: item.id, title: item.title, price: item.price, quantity: item.qty}));
-      const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+      if(cart.length===0) return alert('Cart is empty');
+      const btn = document.getElementById('checkoutBtn'); btn.disabled=true;
+      const grouped = cart.reduce((acc,i)=>{acc[i.id]=acc[i.id]||{...i,qty:0};acc[i.id].qty++;return acc;},{});
+      const items = Object.values(grouped);
+      const total = items.reduce((s,i)=>s+i.price*i.qty,0);
       try {
-        await db.collection('orders').add({ items, total, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-        for (const i of items) {
+        await db.collection('orders').add({items,total,timestamp:firebase.firestore.FieldValue.serverTimestamp()});
+        // decrement stock
+        for(const i of items) {
           await db.collection('books').doc(i.id)
-            .update({ stock: firebase.firestore.FieldValue.increment(-i.quantity) });
+            .update({stock:firebase.firestore.FieldValue.increment(-i.qty)});
         }
-        cart = [];
-        saveCart(); updateCartCount(); renderCart();
-        fetchBooks();
-        document.getElementById('orderStatus').textContent = 'Order placed! Thank you.';
-      } catch (err) {
-        document.getElementById('orderStatus').textContent = 'Error placing order.';
+        cart=[]; saveCart(); updateCartCount(); renderCart(); fetchBooks();
+        document.getElementById('orderStatus').textContent='Order placed!';
+      } catch(err) {
         console.error(err);
-      } finally { btn.disabled = false; }
+        document.getElementById('orderStatus').textContent='Error placing order.';
+      } finally { btn.disabled=false; }
     }
-
-    document.getElementById('checkoutBtn').addEventListener('click', checkout);
-
-    // SPA navigation
-    function navigateTo(section) {
-      ['home','books','cart','about','contact'].forEach(id => {
-        document.getElementById(id).classList.toggle('hidden', id !== section);
-      });
-      if (section === 'books') fetchBooks();
-      if (section === 'cart') renderCart();
-    }
+    document.getElementById('checkoutBtn').onclick = checkout;
 
     async function fetchBooks() {
-      const snapshot = await db.collection('books').get();
-      const books = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      allBooks = books;
+      const snap = await db.collection('books').get();
+      allBooks = snap.docs.map(d=>({id:d.id,...d.data()}));
       renderBooks(allBooks);
     }
-
     function renderBooks(list) {
-      const grid = document.getElementById('booksGrid');
-      grid.innerHTML = '';
-      list.forEach(book => {
-        const card = document.createElement('div'); card.className = 'book-card';
-        const btnHTML = book.stock > 0
+      const grid = document.getElementById('booksGrid'); grid.innerHTML='';
+      list.forEach(book=>{
+        const card = document.createElement('div'); card.className='book-card';
+        const btn = book.stock>0
           ? `<button class="buy-button" onclick="addToCart('${book.id}')">Add to Cart</button>`
           : `<button class="buy-button" disabled>Out of Stock</button>`;
-        card.innerHTML = `
+        card.innerHTML=`
           <img src="${book.imgURL}" alt="${book.title}" loading="lazy">
           <div class="info">
             <h3>${book.title}</h3>
             <p>Price: $${book.price.toFixed(2)}</p>
-            ${btnHTML}
-          </div>
-        `;
+            ${btn}
+          </div>`;
         grid.appendChild(card);
       });
-      document.getElementById('searchInput').oninput = e => {
-        const q = e.target.value.toLowerCase();
-        renderBooks(list.filter(b => b.title.toLowerCase().includes(q)));
+      document.getElementById('searchInput').oninput=e=>{
+        const q=e.target.value.toLowerCase(); renderBooks(list.filter(b=>b.title.toLowerCase().includes(q)));
       };
     }
 
     // Contact form
-    document.getElementById('contactForm').addEventListener('submit', async e => {
+    document.getElementById('contactForm').onsubmit=async e=>{
       e.preventDefault();
-      const data = { name: e.target.name.value, email: e.target.email.value,
-                     message: e.target.message.value,
-                     timestamp: firebase.firestore.FieldValue.serverTimestamp() };
-      try { await db.collection('contacts').add(data);
-        document.getElementById('contactStatus').textContent = 'Message sent! Thank you.';
-        e.target.reset();
-      } catch { document.getElementById('contactStatus').textContent = 'Error sending message.'; }
-    });
+      const data={name:e.target.name.value,email:e.target.email.value,message:e.target.message.value,timestamp:firebase.firestore.FieldValue.serverTimestamp()};
+      try{await db.collection('contacts').add(data);document.getElementById('contactStatus').textContent='Message sent!';e.target.reset();}
+      catch{document.getElementById('contactStatus').textContent='Error sending.';}
+    };
 
-    // Initialize
-    cart = loadCart(); updateCartCount(); renderCart(); navigateTo('home');
+    // init
+    updateCartCount(); showSection('home');
   </script>
 </body>
 </html>
