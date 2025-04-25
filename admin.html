@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Eritrean Bookstore</title>
+  <meta name="description" content="Admin panel for managing Eritrean Bookstore inventory and orders">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --primary: #0044cc;
+      --secondary: #0066ff;
+      --accent: #ffdd00;
+      --bg: #f9f9f9;
+      --text: #333;
+      --card: #fff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Roboto',sans-serif; background:var(--bg); color:var(--text); }
+    header { background:var(--primary); color:#fff; padding:1rem; display:flex; justify-content:space-between; align-items:center; }
+    header a { color:#fff; text-decoration:none; font-weight:700; margin-left:1rem; }
+    main { max-width:1200px; margin:2rem auto; padding:0 1rem; }
+    .card { background:var(--card); border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); padding:1.5rem; margin-bottom:2rem; }
+    .card h2 { margin-bottom:1rem; }
+    form input, form button { width:100%; padding:.75rem; margin-bottom:1rem; border-radius:5px; border:1px solid #ccc; font-size:1rem; }
+    form button { background:var(--primary); color:#fff; border:none; cursor:pointer; transition:background .3s; }
+    form button:hover { background:var(--secondary); }
+    table { width:100%; border-collapse:collapse; margin-top:1rem; }
+    th, td { padding:.75rem; border-bottom:1px solid #ddd; text-align:left; }
+    th { background:#f0f0f0; }
+    .actions button { margin-right:.5rem; padding:.5rem .75rem; border:none; border-radius:4px; cursor:pointer; }
+    .actions .edit { background:var(--accent); color:#000; }
+    .actions .delete { background:#e74c3c; color:#fff; }
+    #logout { background:#333; color:#fff; padding:.5rem 1rem; border:none; border-radius:5px; cursor:pointer; float:right; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Admin Panel</h1>
+    <nav>
+      <a href="index.html">Back to Store</a>
+      <button id="logout" class="hidden">Logout</button>
+    </nav>
+  </header>
+  <main>
+    <!-- Login Card -->
+    <section id="login-card" class="card">
+      <h2>Administrator Login</n2>
+      <input type="email" id="admin-email" placeholder="Email Address" required />
+      <input type="password" id="admin-pass" placeholder="Password" required />
+      <button id="login-btn">Login</button>
+      <p id="login-error" style="color:red;"></p>
+    </section>
+
+    <!-- Admin UI -->
+    <section id="admin-ui" class="hidden">
+      <!-- Add New Book -->
+      <div class="card">
+        <h2>Add New Book</h2>
+        <form id="book-form">
+          <input type="text" id="book-title" placeholder="Title" required />
+          <input type="number" id="book-price" placeholder="Price" min="0" step="0.01" required />
+          <input type="number" id="book-stock" placeholder="Stock" min="0" required />
+          <input type="url" id="book-img" placeholder="Image URL" required />
+          <button type="submit">Add Book</button>
+        </form>
+        <p id="book-form-status"></p>
+      </div>
+
+      <!-- Manage Books Table -->
+      <div class="card">
+        <h2>Manage Inventory</h2>
+        <table>
+          <thead>
+            <tr><th>Title</th><th>Price</th><th>Stock</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="books-table-body"></tbody>
+        </table>
+      </div>
+
+      <!-- Manage Orders (optional) -->
+      <!-- <div class="card">
+        <h2>Recent Orders</h2>
+        <table>...</table>
+      </div> -->
+    </section>
+  </main>
+
+  <script>
+    // Firebase setup
+    const firebaseConfig = {
+      apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
+      authDomain: "eritrean-bookstore.firebaseapp.com",
+      projectId: "eritrean-bookstore",
+      storageBucket: "eritrean-bookstore.firebasestorage.app",
+      messagingSenderId: "645911365846",
+      appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Elements
+    const loginCard = document.getElementById('login-card');
+    const adminUI = document.getElementById('admin-ui');
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout');
+    const emailInput = document.getElementById('admin-email');
+    const passInput = document.getElementById('admin-pass');
+    const loginError = document.getElementById('login-error');
+
+    const bookForm = document.getElementById('book-form');
+    const statusMsg = document.getElementById('book-form-status');
+    const tableBody = document.getElementById('books-table-body');
+
+    // Auth state
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginCard.classList.add('hidden');
+        adminUI.classList.remove('hidden');
+        logoutBtn.classList.remove('hidden');
+        loadInventory();
+      } else {
+        loginCard.classList.remove('hidden');
+        adminUI.classList.add('hidden');
+        logoutBtn.classList.add('hidden');
+      }
+    });
+
+    // Login
+    loginBtn.addEventListener('click', () => {
+      const email = emailInput.value;
+      const pass = passInput.value;
+      auth.signInWithEmailAndPassword(email, pass)
+        .catch(err => { loginError.textContent = err.message; });
+    });
+    logoutBtn.addEventListener('click', () => auth.signOut());
+
+    // Add book
+    bookForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      statusMsg.textContent = '';
+      const title = document.getElementById('book-title').value;
+      const price = parseFloat(document.getElementById('book-price').value);
+      const stock = parseInt(document.getElementById('book-stock').value);
+      const imgURL = document.getElementById('book-img').value;
+      try {
+        await db.collection('books').add({ title, price, stock, imgURL });
+        statusMsg.textContent = 'Book added successfully!';
+        bookForm.reset();
+        loadInventory();
+      } catch (err) {
+        statusMsg.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    // Load Inventory
+    async function loadInventory() {
+      tableBody.innerHTML = '';
+      const snapshot = await db.collection('books').get();
+      snapshot.docs.forEach(doc => {
+        const b = doc.data();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${b.title}</td>
+          <td>$${b.price.toFixed(2)}</td>
+          <td>${b.stock}</td>
+          <td class="actions">
+            <button class="edit" data-id="${doc.id}">Edit Stock</button>
+            <button class="delete" data-id="${doc.id}">Delete</button>
+          </td>`;
+        tableBody.appendChild(tr);
+      });
+      // Attach actions
+      document.querySelectorAll('.delete').forEach(btn => {
+        btn.onclick = async () => {
+          if (confirm('Delete this book?')) {
+            await db.collection('books').doc(btn.dataset.id).delete();
+            loadInventory();
+          }
+        };
+      });
+      document.querySelectorAll('.edit').forEach(btn => {
+        btn.onclick = async () => {
+          const id = btn.dataset.id;
+          const doc = await db.collection('books').doc(id).get();
+          const b = doc.data();
+          const newStock = prompt(`Set new stock for “${b.title}”`, b.stock);
+          if (newStock !== null) {
+            await db.collection('books').doc(id).update({ stock: parseInt(newStock) });
+            loadInventory();
+          }
+        };
+      });
+    }
+  </script>
+</body>
+</html>
