@@ -22,7 +22,7 @@
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Roboto', sans-serif; background: var(--bg-color); color: var(--text-color); }
-    a { text-decoration: none; color: inherit; }
+    a { text-decoration: none; color: inherit; cursor: pointer; }
     header {
       background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
       color: white;
@@ -36,14 +36,13 @@
     }
     header h1 { font-size: 1.75rem; }
     nav ul { list-style: none; display: flex; gap: 1rem; }
-    nav ul li a { font-weight: 700; transition: color 0.3s; cursor: pointer; }
+    nav ul li a { font-weight: 700; transition: color 0.3s; }
     nav ul li a:hover { color: var(--accent-color); }
 
     section { padding: 2rem 1rem; max-width: 1200px; margin: auto; }
     .hero { background: url('/images/hero.jpg') no-repeat center/cover; height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; position: relative; }
     .hero::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
     .hero h2 { font-size: 2.5rem; margin-bottom: 1rem; z-index: 1; }
-    .hero .cta { z-index: 1; }
     .cta .buy-button { background: var(--accent-color); color: var(--primary-color); border: none; padding: 0.75rem 1.5rem; border-radius: 5px; font-size: 1rem; cursor: pointer; transition: background 0.3s, transform 0.2s; }
     .cta .buy-button:hover { background: #ffe066; transform: translateY(-2px); }
 
@@ -57,7 +56,13 @@
     .book-card .info { padding: 1rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
     .info h3 { font-size: 1.1rem; color: var(--primary-color); margin-bottom: 0.5rem; }
     .info p { margin-bottom: 1rem; font-size: 1rem; }
-    .info .buy-button { align-self: flex-start; background: var(--primary-color); }
+    .info .buy-button { background: var(--primary-color); color: white; }
+
+    .cart { background: var(--card-bg); border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+    .cart .content { padding: 1.5rem; }
+    #cartItems { list-style: none; padding: 0; margin-bottom: 1rem; }
+    #cartItems li { margin-bottom: 0.5rem; }
+    #checkoutBtn { margin-top: 1rem; }
 
     .about, .contact { background: var(--card-bg); border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; }
     .about .content, .contact .content { padding: 1.5rem; }
@@ -67,9 +72,6 @@
     .contact-form button:hover { background: var(--secondary-color); }
 
     footer { background: var(--primary-color); color: white; text-align: center; padding: 1rem; margin-top: 2rem; }
-    footer p { margin: 0.5rem 0; }
-    footer a:hover { text-decoration: underline; }
-
     .hidden { display: none; }
     @media (max-width: 600px) { header { flex-direction: column; gap: 0.5rem; } .hero h2 { font-size: 2rem; } }
   </style>
@@ -81,6 +83,7 @@
       <ul>
         <li><a onclick="navigateTo('home')">Home</a></li>
         <li><a onclick="navigateTo('books')">Books</a></li>
+        <li><a onclick="navigateTo('cart')">Cart (<span id="cart-count">0</span>)</a></li>
         <li><a onclick="navigateTo('about')">About</a></li>
         <li><a onclick="navigateTo('contact')">Contact</a></li>
       </ul>
@@ -98,6 +101,16 @@
       <input type="search" id="searchInput" placeholder="Search books by title...">
     </div>
     <div class="books-grid" id="booksGrid"></div>
+  </section>
+
+  <section id="cart" class="hidden cart">
+    <div class="content">
+      <h2>Your Cart</h2>
+      <ul id="cartItems"></ul>
+      <p>Total: $<span id="cartTotal">0.00</span></p>
+      <button id="checkoutBtn" class="buy-button">Place Order</button>
+      <p id="orderStatus"></p>
+    </div>
   </section>
 
   <section id="about" class="hidden about">
@@ -136,69 +149,139 @@
       messagingSenderId: "645911365846",
       appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
     };
-    
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Navigation handling
+    let allBooks = [];
+    let cart = [];
+
+    // Cart helpers
+    function loadCart() {
+      const saved = localStorage.getItem('cart');
+      return saved ? JSON.parse(saved) : [];
+    }
+    function saveCart() {
+      localStorage.setItem('cart', JSON.stringify(cart));
+    }
+    function updateCartCount() {
+      document.getElementById('cart-count').textContent = cart.length;
+    }
+    function renderCart() {
+      const itemsEl = document.getElementById('cartItems');
+      const totalEl = document.getElementById('cartTotal');
+      const statusEl = document.getElementById('orderStatus');
+      statusEl.textContent = '';
+      itemsEl.innerHTML = '';
+      if (cart.length === 0) {
+        itemsEl.innerHTML = '<li>Your cart is empty.</li>';
+        totalEl.textContent = '0.00';
+        return;
+      }
+      const grouped = cart.reduce((acc, item) => {
+        if (!acc[item.id]) acc[item.id] = {...item, qty: 0};
+        acc[item.id].qty++;
+        return acc;
+      }, {});
+      let total = 0;
+      Object.values(grouped).forEach(item => {
+        total += item.price * item.qty;
+        const li = document.createElement('li');
+        li.textContent = `${item.title} x${item.qty} — $${(item.price*item.qty).toFixed(2)}`;
+        itemsEl.appendChild(li);
+      });
+      totalEl.textContent = total.toFixed(2);
+    }
+
+    function addToCart(bookId) {
+      const book = allBooks.find(b => b.id === bookId);
+      if (!book || book.stock <= 0) return;
+      cart.push({id: book.id, title: book.title, price: book.price});
+      saveCart();
+      updateCartCount();
+      renderCart();
+    }
+
+    async function checkout() {
+      if (cart.length === 0) { alert('Your cart is empty.'); return; }
+      const btn = document.getElementById('checkoutBtn');
+      btn.disabled = true;
+      const grouped = cart.reduce((acc, item) => {
+        if (!acc[item.id]) acc[item.id] = {...item, qty:0}; acc[item.id].qty++; return acc;
+      }, {});
+      const items = Object.values(grouped).map(item => ({id: item.id, title: item.title, price: item.price, quantity: item.qty}));
+      const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+      try {
+        await db.collection('orders').add({ items, total, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+        for (const i of items) {
+          await db.collection('books').doc(i.id)
+            .update({ stock: firebase.firestore.FieldValue.increment(-i.quantity) });
+        }
+        cart = [];
+        saveCart(); updateCartCount(); renderCart();
+        fetchBooks();
+        document.getElementById('orderStatus').textContent = 'Order placed! Thank you.';
+      } catch (err) {
+        document.getElementById('orderStatus').textContent = 'Error placing order.';
+        console.error(err);
+      } finally { btn.disabled = false; }
+    }
+
+    document.getElementById('checkoutBtn').addEventListener('click', checkout);
+
+    // SPA navigation
     function navigateTo(section) {
-      ['home','books','about','contact'].forEach(id => {
+      ['home','books','cart','about','contact'].forEach(id => {
         document.getElementById(id).classList.toggle('hidden', id !== section);
       });
       if (section === 'books') fetchBooks();
+      if (section === 'cart') renderCart();
     }
 
-    // Fetch books from Firestore
     async function fetchBooks() {
       const snapshot = await db.collection('books').get();
-      const books = snapshot.docs.map(doc => doc.data());
-      renderBooks(books);
+      const books = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      allBooks = books;
+      renderBooks(allBooks);
     }
 
-    // Render books grid with search filter
     function renderBooks(list) {
       const grid = document.getElementById('booksGrid');
       grid.innerHTML = '';
       list.forEach(book => {
-        const card = document.createElement('div');
-        card.className = 'book-card';
+        const card = document.createElement('div'); card.className = 'book-card';
+        const btnHTML = book.stock > 0
+          ? `<button class="buy-button" onclick="addToCart('${book.id}')">Add to Cart</button>`
+          : `<button class="buy-button" disabled>Out of Stock</button>`;
         card.innerHTML = `
           <img src="${book.imgURL}" alt="${book.title}" loading="lazy">
           <div class="info">
             <h3>${book.title}</h3>
             <p>Price: $${book.price.toFixed(2)}</p>
-            <button class="buy-button">Buy Now</button>
+            ${btnHTML}
           </div>
         `;
         grid.appendChild(card);
       });
       document.getElementById('searchInput').oninput = e => {
-        const query = e.target.value.toLowerCase();
-        renderBooks(list.filter(b => b.title.toLowerCase().includes(query)));
+        const q = e.target.value.toLowerCase();
+        renderBooks(list.filter(b => b.title.toLowerCase().includes(q)));
       };
     }
 
-    // Handle contact form submission
+    // Contact form
     document.getElementById('contactForm').addEventListener('submit', async e => {
       e.preventDefault();
-      const data = {
-        name: e.target.name.value,
-        email: e.target.email.value,
-        message: e.target.message.value,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      try {
-        await db.collection('contacts').add(data);
+      const data = { name: e.target.name.value, email: e.target.email.value,
+                     message: e.target.message.value,
+                     timestamp: firebase.firestore.FieldValue.serverTimestamp() };
+      try { await db.collection('contacts').add(data);
         document.getElementById('contactStatus').textContent = 'Message sent! Thank you.';
         e.target.reset();
-      } catch (error) {
-        document.getElementById('contactStatus').textContent = 'Error sending message.';
-      }
+      } catch { document.getElementById('contactStatus').textContent = 'Error sending message.'; }
     });
 
-    // Initialize app on load
-    navigateTo('home');
+    // Initialize
+    cart = loadCart(); updateCartCount(); renderCart(); navigateTo('home');
   </script>
 </body>
 </html>
