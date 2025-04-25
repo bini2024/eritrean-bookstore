@@ -3,30 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - Eritrean Bookstore</title>
+  <title>Admin Panel - Eritrean Bookstore</ntitle>
   <meta name="description" content="Admin panel for managing bookstore inventory and orders">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root { --primary: #0044cc; --secondary: #0066ff; --accent: #ffdd00; --bg: #f9f9f9; --text: #333; --card: #fff; }
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'Roboto',sans-serif; background:var(--bg); color:var(--text); }
-    header { background:var(--primary); color:#fff; padding:1rem; display:flex; justify-content:space-between; align-items:center; }
-    header a { color:#fff; text-decoration:none; font-weight:700; margin-right:1rem; }
-    header button { background:#333; color:#fff; border:none; padding:.5rem 1rem; border-radius:5px; cursor:pointer; }
-    main { max-width:1200px; margin:2rem auto; padding:0 1rem; }
-    .card { background:var(--card); border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); padding:1.5rem; margin-bottom:2rem; }
-    .card h2 { margin-bottom:1rem; }
-    input,textarea,button { font-family:inherit; font-size:1rem; }
-    input,textarea { width:100%; padding:.75rem; margin-bottom:1rem; border:1px solid #ccc; border-radius:5px; }
-    button { background:var(--primary); color:#fff; border:none; padding:.75rem 1.5rem; border-radius:5px; cursor:pointer; transition:background .3s; }
-    button:hover { background:var(--secondary); }
-    table { width:100%; border-collapse:collapse; margin-top:1rem; }
-    th,td { padding:.75rem; border-bottom:1px solid #ddd; text-align:left; }
-    th { background:#f0f0f0; }
-    .actions button { margin-right:.5rem; padding:.5rem .75rem; border:none; border-radius:4px; cursor:pointer; }
-    .actions .edit { background:var(--accent); color:#000; }
-    .actions .delete { background:#e74c3c; color:#fff; }
-    .hidden { display:none; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);}
+    header{background:var(--primary);color:#fff;padding:1rem;display:flex;justify-content:space-between;align-items:center;}
+    header a{color:#fff;text-decoration:none;font-weight:700;margin-right:1rem;}
+    header button{background:#333;color:#fff;border:none;padding:.5rem 1rem;border-radius:5px;cursor:pointer;}
+    main{max-width:1200px;margin:2rem auto;padding:0 1rem;}
+    .card{background:var(--card);border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);padding:1.5rem;margin-bottom:2rem;}
+    .card h2{margin-bottom:1rem;}
+    input,textarea,button{font-family:inherit;font-size:1rem;}
+    input,textarea{width:100%;padding:.75rem;margin-bottom:1rem;border:1px solid #ccc;border-radius:5px;}
+    button{background:var(--primary);color:#fff;border:none;padding:.75rem 1.5rem;border-radius:5px;cursor:pointer;transition:background .3s;}
+    button:hover{background:var(--secondary);}
+    table{width:100%;border-collapse:collapse;margin-top:1rem;}
+    th,td{padding:.75rem;border-bottom:1px solid #ddd;text-align:left;}
+    th{background:#f0f0f0;}
+    .actions button{margin-right:.5rem;padding:.5rem .75rem;border:none;border-radius:4px;cursor:pointer;}
+    .actions .edit{background:var(--accent);color:#000;}
+    .actions .delete{background:#e74c3c;color:#fff;}
+    .actions .fulfill{background:#27ae60;color:#fff;}
+    .hidden{display:none;}
   </style>
 </head>
 <body>
@@ -37,10 +38,11 @@
       <button id="logout-btn" class="hidden">Logout</button>
     </nav>
   </header>
+
   <main>
     <!-- Login Section -->
     <section id="login-section" class="card">
-      <h2>Admin Login</n2>
+      <h2>Admin Login</h2>
       <input type="email" id="admin-email" placeholder="Email Address" />
       <input type="password" id="admin-pass" placeholder="Password" />
       <button id="login-btn">Login</button>
@@ -49,7 +51,7 @@
 
     <!-- Admin UI -->
     <section id="admin-section" class="hidden">
-      <!-- Add Book -->
+      <!-- Add New Book -->
       <div class="card">
         <h2>Add New Book</h2>
         <form id="add-book-form">
@@ -72,13 +74,24 @@
           <tbody id="books-table-body"></tbody>
         </table>
       </div>
+
+      <!-- Manage Orders -->
+      <div class="card">
+        <h2>Manage Orders</h2>
+        <table>
+          <thead>
+            <tr><th>Order ID</th><th>Items</th><th>Total</th><th>Placed At</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="orders-table-body"></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
@@ -93,7 +106,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // DOM Elements
+    // Elements
     const loginSection = document.getElementById('login-section');
     const adminSection = document.getElementById('admin-section');
     const logoutBtn = document.getElementById('logout-btn');
@@ -104,14 +117,16 @@
     const addBookForm = document.getElementById('add-book-form');
     const bookStatus = document.getElementById('book-status');
     const booksTableBody = document.getElementById('books-table-body');
+    const ordersTableBody = document.getElementById('orders-table-body');
 
-    // Auth state handling
+    // Auth state
     onAuthStateChanged(auth, user => {
       if (user) {
         loginSection.classList.add('hidden');
         adminSection.classList.remove('hidden');
         logoutBtn.classList.remove('hidden');
         loadInventory();
+        loadOrders();
       } else {
         loginSection.classList.remove('hidden');
         adminSection.classList.add('hidden');
@@ -132,7 +147,7 @@
     // Logout
     logoutBtn.addEventListener('click', () => signOut(auth));
 
-    // Add new book
+    // Add book
     addBookForm.addEventListener('submit', async e => {
       e.preventDefault();
       bookStatus.textContent = '';
@@ -162,12 +177,12 @@
           <td>$${b.price.toFixed(2)}</td>
           <td>${b.stock}</td>
           <td class="actions">
-            <button class="edit">Edit</button>
-            <button class="delete">Delete</button>
+            <button class="edit" data-id="${docSnap.id}">Edit</button>
+            <button class="delete" data-id="${docSnap.id}">Delete</button>
           </td>`;
         // Edit
         tr.querySelector('.edit').addEventListener('click', async () => {
-          const newStock = prompt(`Enter new stock for ${b.title}`, b.stock);
+          const newStock = prompt(`New stock for ${b.title}`, b.stock);
           if (newStock !== null) {
             await updateDoc(doc(db, 'books', docSnap.id), { stock: parseInt(newStock) });
             loadInventory();
@@ -181,6 +196,43 @@
           }
         });
         booksTableBody.appendChild(tr);
+      });
+    }
+
+    // Load orders
+    async function loadOrders() {
+      ordersTableBody.innerHTML = '';
+      const q = query(collection(db, 'orders'), orderBy('timestamp', 'desc'));
+      const snap = await getDocs(q);
+      snap.forEach(docSnap => {
+        const o = docSnap.data();
+        const tr = document.createElement('tr');
+        const itemsStr = o.items.map(i => `${i.title} x${i.quantity}`).join(', ');
+        const date = o.timestamp?.toDate().toLocaleString() || '';
+        const status = o.status || 'pending';
+        tr.innerHTML = `
+          <td>${docSnap.id}</td>
+          <td>${itemsStr}</td>
+          <td>$${o.total.toFixed(2)}</td>
+          <td>${date}</td>
+          <td>${status}</td>
+          <td class="actions">
+            <button class="fulfill" data-id="${docSnap.id}">Fulfill</button>
+            <button class="deleteOrder" data-id="${docSnap.id}">Delete</button>
+          </td>`;
+        // Fulfill
+        tr.querySelector('.fulfill').addEventListener('click', async () => {
+          await updateDoc(doc(db, 'orders', docSnap.id), { status: 'fulfilled' });
+          loadOrders();
+        });
+        // Delete order
+        tr.querySelector('.deleteOrder').addEventListener('click', async () => {
+          if (confirm(`Delete order ${docSnap.id}?`)) {
+            await deleteDoc(doc(db, 'orders', docSnap.id));
+            loadOrders();
+          }
+        });
+        ordersTableBody.appendChild(tr);
       });
     }
   </script>
