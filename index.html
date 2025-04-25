@@ -7,7 +7,7 @@
   <meta name="description" content="Discover and purchase the best Eritrean literature online.">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDKs (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
@@ -127,21 +127,26 @@
   </footer>
 
   <script>
-    // Firebase initialization (replace with your config)
+    // Firebase configuration (your real credentials)
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
+      apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
+      authDomain: "eritrean-bookstore.firebaseapp.com",
+      projectId: "eritrean-bookstore",
+      storageBucket: "eritrean-bookstore.firebasestorage.app",
+      messagingSenderId: "645911365846",
+      appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
     };
+    
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Navigation
+    // Navigation handling
     function navigateTo(section) {
       ['home','books','about','contact'].forEach(id => {
         document.getElementById(id).classList.toggle('hidden', id !== section);
       });
-      if(section === 'books') fetchBooks();
+      if (section === 'books') fetchBooks();
     }
 
     // Fetch books from Firestore
@@ -151,7 +156,7 @@
       renderBooks(books);
     }
 
-    // Render books grid
+    // Render books grid with search filter
     function renderBooks(list) {
       const grid = document.getElementById('booksGrid');
       grid.innerHTML = '';
@@ -168,11 +173,9 @@
         `;
         grid.appendChild(card);
       });
-
-      // Attach search filtering
       document.getElementById('searchInput').oninput = e => {
-        const q = e.target.value.toLowerCase();
-        renderBooks(list.filter(b => b.title.toLowerCase().includes(q)));
+        const query = e.target.value.toLowerCase();
+        renderBooks(list.filter(b => b.title.toLowerCase().includes(query)));
       };
     }
 
@@ -183,18 +186,18 @@
         name: e.target.name.value,
         email: e.target.email.value,
         message: e.target.message.value,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
       };
       try {
         await db.collection('contacts').add(data);
         document.getElementById('contactStatus').textContent = 'Message sent! Thank you.';
         e.target.reset();
-      } catch (err) {
+      } catch (error) {
         document.getElementById('contactStatus').textContent = 'Error sending message.';
       }
     });
 
-    // Initial load
+    // Initialize app on load
     navigateTo('home');
   </script>
 </body>
