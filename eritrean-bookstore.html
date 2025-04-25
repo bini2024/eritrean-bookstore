@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eritrean Bookstore</title>
+  <meta name="description" content="Discover and purchase the best Eritrean literature online.">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    :root {
+      --primary-color: #0044cc;
+      --secondary-color: #0066ff;
+      --accent-color: #ffdd00;
+      --bg-color: #f9f9f9;
+      --text-color: #333;
+      --card-bg: #fff;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Roboto', sans-serif; background: var(--bg-color); color: var(--text-color); }
+    a { text-decoration: none; color: inherit; }
+    header {
+      background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+      color: white;
+      padding: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 1.75rem; }
+    nav ul { list-style: none; display: flex; gap: 1rem; }
+    nav ul li a { font-weight: 700; transition: color 0.3s; cursor: pointer; }
+    nav ul li a:hover { color: var(--accent-color); }
+
+    section { padding: 2rem 1rem; max-width: 1200px; margin: auto; }
+    .hero { background: url('/images/hero.jpg') no-repeat center/cover; height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; position: relative; }
+    .hero::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
+    .hero h2 { font-size: 2.5rem; margin-bottom: 1rem; z-index: 1; }
+    .hero .cta { z-index: 1; }
+    .cta .buy-button { background: var(--accent-color); color: var(--primary-color); border: none; padding: 0.75rem 1.5rem; border-radius: 5px; font-size: 1rem; cursor: pointer; transition: background 0.3s, transform 0.2s; }
+    .cta .buy-button:hover { background: #ffe066; transform: translateY(-2px); }
+
+    .books-header { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .books-header h2 { font-size: 2rem; color: var(--primary-color); }
+    .books-header input { width: 100%; max-width: 400px; padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; }
+    .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1.5rem; }
+    .book-card { background: var(--card-bg); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; transition: transform 0.3s, box-shadow 0.3s; }
+    .book-card:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+    .book-card img { width: 100%; height: 250px; object-fit: cover; }
+    .book-card .info { padding: 1rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .info h3 { font-size: 1.1rem; color: var(--primary-color); margin-bottom: 0.5rem; }
+    .info p { margin-bottom: 1rem; font-size: 1rem; }
+    .info .buy-button { align-self: flex-start; background: var(--primary-color); }
+
+    .about, .contact { background: var(--card-bg); border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+    .about .content, .contact .content { padding: 1.5rem; }
+    .contact-form { display: flex; flex-direction: column; gap: 1rem; }
+    .contact-form input, .contact-form textarea { padding: 0.75rem; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; }
+    .contact-form button { background: var(--primary-color); color: white; padding: 0.75rem; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; transition: background 0.3s; }
+    .contact-form button:hover { background: var(--secondary-color); }
+
+    footer { background: var(--primary-color); color: white; text-align: center; padding: 1rem; margin-top: 2rem; }
+    footer p { margin: 0.5rem 0; }
+    footer a:hover { text-decoration: underline; }
+
+    .hidden { display: none; }
+    @media (max-width: 600px) { header { flex-direction: column; gap: 0.5rem; } .hero h2 { font-size: 2rem; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Eritrean Bookstore</h1>
+    <nav>
+      <ul>
+        <li><a onclick="navigateTo('home')">Home</a></li>
+        <li><a onclick="navigateTo('books')">Books</a></li>
+        <li><a onclick="navigateTo('about')">About</a></li>
+        <li><a onclick="navigateTo('contact')">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section id="home" class="hero">
+    <h2>Discover the Best Eritrean Books</h2>
+    <div class="cta"><button class="buy-button" onclick="navigateTo('books')">Shop Now</button></div>
+  </section>
+
+  <section id="books" class="hidden">
+    <div class="books-header">
+      <h2>Our Collection</h2>
+      <input type="search" id="searchInput" placeholder="Search books by title...">
+    </div>
+    <div class="books-grid" id="booksGrid"></div>
+  </section>
+
+  <section id="about" class="hidden about">
+    <div class="content">
+      <h2>About Our Store</h2>
+      <p>At Eritrean Bookstore, we are passionate about preserving and sharing the rich literary heritage of Eritrea. Founded in 2024, we curate a diverse collection of fiction, non-fiction, poetry, and historical works authored by Eritrean writers.</p>
+      <p>Our mission is to connect readers worldwide with stories that celebrate Eritrean culture, history, and perspectives. Each book in our collection is selected for its authenticity and quality.</p>
+      <p>We take pride in exceptional customer service, fast shipping, and a user-friendly shopping experience. Whether you're a lifelong fan of Eritrean literature or just discovering it, we're here to help you find your next great read.</p>
+    </div>
+  </section>
+
+  <section id="contact" class="hidden contact">
+    <div class="content">
+      <h2>Contact Us</h2>
+      <form class="contact-form" id="contactForm">
+        <input type="text" name="name" placeholder="Your Name" required>
+        <input type="email" name="email" placeholder="Your Email" required>
+        <textarea name="message" rows="5" placeholder="Your Message" required></textarea>
+        <button type="submit">Send Message</button>
+      </form>
+      <p id="contactStatus"></p>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2025 Eritrean Bookstore. All rights reserved.</p>
+  </footer>
+
+  <script>
+    // Firebase initialization (replace with your config)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Navigation
+    function navigateTo(section) {
+      ['home','books','about','contact'].forEach(id => {
+        document.getElementById(id).classList.toggle('hidden', id !== section);
+      });
+      if(section === 'books') fetchBooks();
+    }
+
+    // Fetch books from Firestore
+    async function fetchBooks() {
+      const snapshot = await db.collection('books').get();
+      const books = snapshot.docs.map(doc => doc.data());
+      renderBooks(books);
+    }
+
+    // Render books grid
+    function renderBooks(list) {
+      const grid = document.getElementById('booksGrid');
+      grid.innerHTML = '';
+      list.forEach(book => {
+        const card = document.createElement('div');
+        card.className = 'book-card';
+        card.innerHTML = `
+          <img src="${book.imgURL}" alt="${book.title}" loading="lazy">
+          <div class="info">
+            <h3>${book.title}</h3>
+            <p>Price: $${book.price.toFixed(2)}</p>
+            <button class="buy-button">Buy Now</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // Attach search filtering
+      document.getElementById('searchInput').oninput = e => {
+        const q = e.target.value.toLowerCase();
+        renderBooks(list.filter(b => b.title.toLowerCase().includes(q)));
+      };
+    }
+
+    // Handle contact form submission
+    document.getElementById('contactForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const data = {
+        name: e.target.name.value,
+        email: e.target.email.value,
+        message: e.target.message.value,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+      try {
+        await db.collection('contacts').add(data);
+        document.getElementById('contactStatus').textContent = 'Message sent! Thank you.';
+        e.target.reset();
+      } catch (err) {
+        document.getElementById('contactStatus').textContent = 'Error sending message.';
+      }
+    });
+
+    // Initial load
+    navigateTo('home');
+  </script>
+</body>
+</html>
