@@ -141,54 +141,35 @@
    .footer {
   background: var(--primary);
   color: white;
-  padding: 2rem 1rem;
-  font-size: 0.9rem;
+  padding: 1rem 0.5rem;          /* cut vertical padding in half */
+  font-size: 0.8rem;             /* slightly smaller text */
 }
 .footer-container {
-  max-width: 1200px;
-  margin: auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
+  gap: 1rem;                     /* tighter column spacing */
 }
 .footer-col {
-  flex: 1 1 200px;
-  min-width: 180px;
+  min-width: 150px;              /* allow columns to shrink */
 }
 .footer-col h4 {
   margin-bottom: 0.5rem;
-  font-weight: bold;
-}
-.footer-col ul {
-  list-style: none;
+  font-size: 1rem;               /* align heading size */
 }
 .footer-col ul li {
-  margin-bottom: 0.5rem;
-}
-.footer-col a {
-  color: white;
-  text-decoration: none;
-}
-.footer-col a:hover {
-  text-decoration: underline;
-}
-.social-icons a {
-  margin-right: 0.5rem;
-  font-size: 1.2rem;
-  text-decoration: none;
+  margin-bottom: 0.25rem;        /* reduce list item spacing */
 }
 .footer-bottom {
-  text-align: center;
-  margin-top: 1.5rem;
-  border-top: 1px solid rgba(255,255,255,0.3);
-  padding-top: 1rem;
+  margin-top: 1rem;              /* bring copyright up */
+  padding-top: 0.5rem;           /* smaller top padding */
 }
+
+/* Mobile tweak stays the same */
 @media (max-width: 600px) {
   .footer-container {
     flex-direction: column;
     align-items: center;
   }
 }
+
  
   </style>
 </head>
