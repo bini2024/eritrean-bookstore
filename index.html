@@ -6,9 +6,11 @@
   <title>Eritrean Bookstore</title>
   <meta name="description" content="Discover and purchase the best Eritrean literature online.">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-  <!-- Firebase SDKs -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
   <style>
     :root {
       --primary: #0044cc;
@@ -18,8 +20,10 @@
       --text: #333;
       --card-bg: #fff;
       --panel-width: 320px;
+      --error-color: #d9534f;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body { font-family: 'Roboto', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
     header {
       background: var(--primary);
@@ -34,20 +38,24 @@
     }
     header h1 { font-size: 1.5rem; }
     header nav ul { list-style: none; display: flex; gap: 1rem; align-items: center; }
-    header nav ul li a {
+    header nav ul li a, header nav ul li button {
       color: #fff;
       text-decoration: none;
       font-weight: bold;
       cursor: pointer;
+      background: none;
+      border: none;
+      font-size: 1rem; /* Match link style */
+      font-family: inherit; /* Match link style */
     }
-    .cart-button {
+    .cart-button-wrapper { /* Renamed from cart-button for clarity */
       position: relative;
       display: inline-block;
     }
     .cart-count {
       position: absolute;
-      top: -6px;
-      right: -10px;
+      top: -8px;
+      right: -12px;
       background: var(--accent);
       color: var(--primary);
       border-radius: 50%;
@@ -56,7 +64,8 @@
       font-weight: bold;
     }
     .hero {
-      background: url('/images/hero.jpg') no-repeat center/cover;
+      background: url('/images/hero.jpg') no-repeat center/cover; /* Use a real or placeholder image URL */
+      background-color: #555; /* Fallback color */
       height: 60vh;
       display: flex;
       flex-direction: column;
@@ -68,12 +77,15 @@
     }
     .hero::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
     .hero h2 { font-size: 2.5rem; z-index: 1; margin-bottom: 1rem; }
-    .hero .cta .btn { background: var(--accent); color: var(--primary); border: none; padding: 0.75rem 1.5rem; border-radius: 5px; cursor: pointer; transition: background 0.3s; z-index:1; }
+    .hero .cta .btn { background: var(--accent); color: var(--primary); border: none; padding: 0.75rem 1.5rem; border-radius: 5px; cursor: pointer; transition: background 0.3s; z-index:1; font-size: 1rem; font-weight: bold;}
     .hero .cta .btn:hover { background: #ffe066; }
+
     .books-section { padding: 2rem 1rem; max-width: 1200px; margin: auto; }
+    #booksError { color: var(--error-color); text-align: center; margin-bottom: 1rem; font-weight: bold; }
     .books-header { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
     .books-header h2 { font-size: 2rem; color: var(--primary); }
     .books-header input { width: 100%; max-width: 400px; padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px; }
+
     .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1.5rem; }
     .book-card {
       background: var(--card-bg);
@@ -85,40 +97,52 @@
       transition: transform 0.3s;
     }
     .book-card:hover { transform: translateY(-5px); }
-    .book-card img { width: 100%; height: 250px; object-fit: cover; }
+    .book-card img { width: 100%; height: 250px; object-fit: cover; background-color: #eee; /* Placeholder bg */ }
     .book-info { padding: 1rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
     .book-info h3 { font-size: 1.1rem; color: var(--primary); margin-bottom: 0.5rem; }
     .book-info p { margin-bottom: 0.5rem; }
-    .book-info .controls { display: flex; align-items: center; gap: 0.5rem; }
-    .book-info .qty { width: 60px; padding: 0.25rem; text-align: center; border: 1px solid #ccc; border-radius: 5px; }
+    .book-info .controls { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+    .book-info .qty { width: 60px; padding: 0.35rem; text-align: center; border: 1px solid #ccc; border-radius: 5px; }
     .book-info .add-btn { background: var(--primary); color: white; border: none; padding: 0.5rem; border-radius: 5px; cursor: pointer; flex-shrink: 0; transition: background 0.3s; }
     .book-info .add-btn:disabled { background: #ccc; cursor: not-allowed; }
+
     /* Cart panel */
     .cart-panel {
       position: fixed;
       top: 0;
-      right: calc(-1 * var(--panel-width));
+      right: calc(-1 * var(--panel-width) - 10px); /* Hide fully */
       width: var(--panel-width);
+      max-width: 90vw; /* Prevent excessive width on small screens */
       height: 100%;
       background: var(--card-bg);
       box-shadow: -4px 0 8px rgba(0,0,0,0.2);
-      transition: right 0.3s;
+      transition: right 0.3s ease-in-out;
       z-index: 2000;
       display: flex;
       flex-direction: column;
     }
     .cart-panel.open { right: 0; }
-    .cart-header { padding: 1rem; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; }
+    .cart-header { padding: 1rem; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
     .cart-header h2 { margin: 0; font-size: 1.25rem; }
-    .cart-close { background: transparent; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+    .cart-close { background: transparent; border: none; color: white; font-size: 1.75rem; cursor: pointer; line-height: 1; padding: 0 0.5rem;}
     .cart-content { flex-grow: 1; overflow-y: auto; padding: 1rem; }
-    .cart-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .cart-item .item-info { flex-grow: 1; }
-    .cart-item .item-controls { display: flex; align-items: center; gap: 0.5rem; }
-    .cart-item .item-controls button { background: transparent; border: 1px solid #ccc; padding: 0.25rem 0.5rem; border-radius: 5px; cursor: pointer; }
-    .cart-footer { padding: 1rem; border-top: 1px solid #ddd; }
-    .cart-footer p { margin-bottom: 1rem; }
-    .cart-footer .checkout-btn { width: 100%; padding: 0.75rem; font-size: 1rem; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 0.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.75rem; }
+    .cart-item .item-info { flex-grow: 1; font-size: 0.9rem;}
+    .cart-item .item-info strong { display: block; margin-bottom: 0.25rem; font-size: 1rem;}
+    .cart-item .item-controls { display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0;}
+    .cart-item .item-controls button { background: #eee; border: 1px solid #ccc; padding: 0.25rem 0.5rem; border-radius: 5px; cursor: pointer; font-size: 0.9rem; min-width: 25px; text-align: center; }
+    .cart-item .item-controls .remove-btn { background: #fdd; color: var(--error-color); border-color: var(--error-color);}
+    .cart-item .item-qty { padding: 0 0.5rem; font-weight: bold; min-width: 20px; text-align: center; }
+
+    .cart-footer { padding: 1rem; border-top: 1px solid #ddd; flex-shrink: 0; }
+    .cart-footer p { margin-bottom: 1rem; font-weight: bold; font-size: 1.1rem; }
+    .cart-footer .checkout-btn { width: 100%; padding: 0.75rem; font-size: 1rem; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s; }
+    .cart-footer .checkout-btn:hover { background: var(--secondary); }
+    .cart-footer .checkout-btn:disabled { background: #ccc; cursor: not-allowed; }
+    #orderStatus { margin-top: 1rem; font-weight: bold; }
+    #orderStatus.success { color: green; }
+    #orderStatus.error { color: var(--error-color); }
+
     /* Overlay */
     .overlay {
       position: fixed;
@@ -129,48 +153,55 @@
       background: rgba(0,0,0,0.4);
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.3s;
+      transition: opacity 0.3s, visibility 0.3s;
       z-index: 1500;
     }
     .overlay.show { opacity: 1; visibility: visible; }
+
+    /* Focus Styles for Accessibility */
+    a:focus, button:focus, input:focus {
+      outline: 2px solid var(--secondary);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.3); /* Optional softer glow */
+    }
+    /* Remove default outline if custom is applied */
+    a, button, input { outline: none; }
+
+
     @media (max-width: 600px) {
+      header h1 { font-size: 1.2rem; }
       .hero h2 { font-size: 2rem; }
       .books-grid { grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); }
+      .book-card img { height: 200px; }
+      /* Consider making cart panel full width or wider on small screens */
+      /* .cart-panel { width: 90vw; --panel-width: 90vw; } */
     }
 
-   .footer {
-  background: var(--primary);
-  color: white;
-  padding: 1rem 0.5rem;          /* cut vertical padding in half */
-  font-size: 0.8rem;             /* slightly smaller text */
-}
-.footer-container {
-  gap: 1rem;                     /* tighter column spacing */
-}
-.footer-col {
-  min-width: 150px;              /* allow columns to shrink */
-}
-.footer-col h4 {
-  margin-bottom: 0.5rem;
-  font-size: 1rem;               /* align heading size */
-}
-.footer-col ul li {
-  margin-bottom: 0.25rem;        /* reduce list item spacing */
-}
-.footer-bottom {
-  margin-top: 1rem;              /* bring copyright up */
-  padding-top: 0.5rem;           /* smaller top padding */
-}
-
-/* Mobile tweak stays the same */
-@media (max-width: 600px) {
-  .footer-container {
-    flex-direction: column;
-    align-items: center;
+  .footer {
+    background-color: #111;
+    color: #ddd;
+    padding: 20px 15px;
+    font-family: Arial, sans-serif;
+    margin-top: 3rem; /* Ensure space above footer */
   }
-}
+  .footer-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 20px;
+    max-width: 1000px;
+    margin: auto;
+  }
+  .footer-col { flex: 1 1 200px; }
+  .footer-col h4 { color: #fff; margin-bottom: 10px; font-size: 16px; }
+  .footer-col p, .footer-col ul, .footer-col a { color: #bbb; font-size: 13px; text-decoration: none; line-height: 1.4; }
+  .footer-col ul { list-style: none; padding: 0; }
+  .footer-col ul li { margin-bottom: 6px; }
+  .footer-col a:hover { color: #fff; }
+  .social-icons a { font-size: 16px; margin-right: 8px; color: #bbb; }
+  .social-icons a:hover { color: #fff; }
+  .footer-bottom { text-align: center; margin-top: 20px; border-top: 1px solid #333; padding-top: 10px; font-size: 12px; color: #999; }
 
- 
   </style>
 </head>
 <body>
@@ -178,10 +209,12 @@
     <h1>Eritrean Bookstore</h1>
     <nav>
       <ul>
-        <li><a onclick="scrollTo('books')">Books</a></li>
-        <li class="cart-button">
-          <a onclick="toggleCart()">Cart</a>
-          <span class="cart-count" id="cart-count">0</span>
+        <li><a href="#books">Books</a></li>
+        <li class="cart-button-wrapper">
+          <button type="button" id="cartToggleButton" aria-label="Toggle shopping cart">
+              Cart
+              <span class="cart-count" id="cart-count" aria-live="polite">0</span>
+          </button>
         </li>
       </ul>
     </nav>
@@ -189,7 +222,7 @@
 
   <div class="hero">
     <h2>Discover the Best Eritrean Books</h2>
-    <div class="cta"><button class="btn" onclick="scrollTo('books')">Shop Now</button></div>
+    <div class="cta"><button class="btn" onclick="scrollToElement('books')">Shop Now</button></div>
   </div>
 
   <section id="books" class="books-section">
@@ -197,17 +230,21 @@
       <h2>Our Collection</h2>
       <input type="search" id="searchInput" placeholder="Search books by title...">
     </div>
-    <div class="books-grid" id="booksGrid"></div>
+    <div id="booksError"></div>
+    <div class="books-grid" id="booksGrid">
+        <p>Loading books...</p>
+    </div>
   </section>
 
-  <!-- Cart Panel -->
-  <div class="overlay" id="cartOverlay" onclick="toggleCart()"></div>
-  <aside class="cart-panel" id="cartPanel">
+  <div class="overlay" id="cartOverlay"></div>
+  <aside class="cart-panel" id="cartPanel" aria-labelledby="cartHeading">
     <div class="cart-header">
-      <h2>Your Cart</h2>
-      <button class="cart-close" onclick="toggleCart()">&times;</button>
+      <h2 id="cartHeading">Your Cart</h2>
+      <button class="cart-close" id="cartCloseButton" aria-label="Close cart">&times;</button>
     </div>
-    <div class="cart-content" id="cartItems"></div>
+    <div class="cart-content" id="cartItems">
+        <p>Your cart is empty.</p>
+    </div>
     <div class="cart-footer">
       <p>Total: $<span id="cartTotal">0.00</span></p>
       <button class="checkout-btn" id="checkoutBtn">Checkout</button>
@@ -216,155 +253,415 @@
   </aside>
 
   <footer class="footer">
-  <div class="footer-container">
-    <div class="footer-col">
-      <h4>About Us</h4>
-      <p>At Eritrean Bookstore, we curate the finest literature celebrating Eritrean culture and history.</p>
-    </div>
-    <div class="footer-col">
-      <h4>Quick Links</h4>
-      <ul>
-        <li><a href="#books">Browse Books</a></li>
-        <li><a href="#contact">Contact Us</a></li>
-        <li><a href="admin.html">Admin Panel</a></li>
-      </ul>
-    </div>
-    <div class="footer-col">
-      <h4>Connect</h4>
-      <p>Email: <a href="mailto:contact@eritreanbookstore.com">contact@eritreanbookstore.com</a></p>
-      <p>Follow us:</p>
-      <div class="social-icons">
-        <a href="#" aria-label="Facebook">📘</a>
-        <a href="#" aria-label="Twitter">🐦</a>
-        <a href="#" aria-label="Instagram">📸</a>
+    <div class="footer-container">
+      <div class="footer-col about">
+        <h4>About Eritrean Bookstore</h4>
+        <p>We curate Eritrea’s finest literary works—celebrating culture, history, and heritage through timeless books and stories.</p>
+      </div>
+      <div class="footer-col links">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="#books">Browse Books</a></li>
+          <li><a href="#contact">Contact Us</a></li>
+          <li><a href="admin.html">Admin Panel</a></li>
+        </ul>
+      </div>
+      <div class="footer-col contact" id="contact">
+        <h4>Connect With Us</h4>
+        <p>Email: <a href="mailto:contact@eritreanbookstore.com">contact@eritreanbookstore.com</a></p>
+        <div class="social-icons">
+          <a href="#" aria-label="Facebook" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" aria-label="Twitter" title="Twitter"><i class="fab fa-twitter"></i></a>
+          <a href="#" aria-label="Instagram" title="Instagram"><i class="fab fa-instagram"></i></a>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="footer-bottom">
-    <p>&copy; 2025 Eritrean Bookstore. All rights reserved.</p>
-  </div>
-</footer>
-
+    <div class="footer-bottom">
+       <p>&copy; <span id="currentYear">2025</span> <strong>Eritrean Bookstore</strong>. All rights reserved.</p>
+    </div>
+  </footer>
 
   <script>
-    // Firebase config
+    // --- Firebase Configuration (Using your provided details) ---
     const firebaseConfig = {
       apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
       authDomain: "eritrean-bookstore.firebaseapp.com",
       projectId: "eritrean-bookstore",
-      storageBucket: "eritrean-bookstore.firebasestorage.app",
+      storageBucket: "eritrean-bookstore.appspot.com", // Corrected from .firebasestorage.app if using default bucket
       messagingSenderId: "645911365846",
       appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
     };
+
+    // --- Initialize Firebase (v8 Compat Syntax) ---
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const db = firebase.firestore(); // Use v8 syntax
 
+    // --- Constants ---
+    const BOOKS_COLLECTION = 'books';
+    const ORDERS_COLLECTION = 'orders';
+    const ORDER_STATUS_PENDING = 'pending';
+    const DEBOUNCE_DELAY = 300; // ms for search debounce
+
+    // --- Global State ---
     let allBooks = [];
-    let cart = JSON.parse(localStorage.getItem('cart')||'[]');
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let searchTimeout;
 
-    // Utility
-    function scrollTo(id) { document.getElementById(id).scrollIntoView({ behavior: 'smooth' }); }
-    function toggleCart() {
-      document.getElementById('cartPanel').classList.toggle('open');
-      document.getElementById('cartOverlay').classList.toggle('show');
-      renderCart();
-    }
-    function saveCart() { localStorage.setItem('cart', JSON.stringify(cart)); updateCartCount(); }
-    function updateCartCount() { document.getElementById('cart-count').textContent = cart.reduce((sum,i)=>sum+i.quantity,0); }
+    // --- DOM Element Caching ---
+    const booksGrid = document.getElementById('booksGrid');
+    const searchInput = document.getElementById('searchInput');
+    const cartPanel = document.getElementById('cartPanel');
+    const cartOverlay = document.getElementById('cartOverlay');
+    const cartItemsContainer = document.getElementById('cartItems');
+    const cartTotalEl = document.getElementById('cartTotal');
+    const cartCountEl = document.getElementById('cart-count');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    const orderStatusEl = document.getElementById('orderStatus');
+    const cartToggleButton = document.getElementById('cartToggleButton');
+    const cartCloseButton = document.getElementById('cartCloseButton');
+    const booksErrorEl = document.getElementById('booksError');
+    const currentYearEl = document.getElementById('currentYear');
 
-    // Fetch & render books
-    async function fetchBooks() {
-      const snap = await db.collection('books').get();
-      allBooks = snap.docs.map(d=>({ id: d.id, ...d.data() }));
-      renderBooks(allBooks);
-    }
-    function renderBooks(list) {
-      const grid = document.getElementById('booksGrid'); grid.innerHTML='';
-      list.forEach(book=>{
-        const card = document.createElement('div'); card.className='book-card';
-        card.innerHTML = `
-          <img src="${book.imgURL}" alt="${book.title}" loading="lazy">
-          <div class="book-info">
-            <h3>${book.title}</h3>
-            <p>$${book.price.toFixed(2)}</p>
-            <div class="controls">
-              <input type="number" min="1" max="${book.stock}" value="1" class="qty" id="qty-${book.id}" />
-              <button class="add-btn" id="btn-${book.id}" ${book.stock===0?'disabled':''}>${book.stock>0?'Add to Cart':'Out of Stock'}</button>
-            </div>
-          </div>`;
-        grid.appendChild(card);
-        // Attach add handler
-        document.getElementById(`btn-${book.id}`).onclick = () => {
-          const qty = parseInt(document.getElementById(`qty-${book.id}`).value);
-          addToCart(book.id, qty);
-          toggleCart();
-        };
-      });
-      document.getElementById('searchInput').oninput = e => {
-        const q = e.target.value.toLowerCase();
-        renderBooks(list.filter(b=>b.title.toLowerCase().includes(q)));
-      };
-    }
 
-    // Cart functions
-    function addToCart(id, qty) {
-      const book = allBooks.find(b=>b.id===id);
-      if (!book || book.stock < qty) return;
-      // Remove existing entry
-      cart = cart.filter(i=>i.id!==id);
-      cart.push({ id, title: book.title, price: book.price, quantity: qty });
-      saveCart();
-    }
-    function renderCart() {
-      const container = document.getElementById('cartItems'); container.innerHTML='';
-      const totalEl = document.getElementById('cartTotal'); let total=0;
-      if(cart.length===0) { container.innerHTML='<p>Your cart is empty.</p>'; totalEl.textContent='0.00'; return; }
-      cart.forEach(item=>{
-        total += item.price*item.quantity;
-        const div = document.createElement('div'); div.className='cart-item';
-        div.innerHTML = `
-          <div class="item-info">
-            <strong>${item.title}</strong><br>$${item.price.toFixed(2)} x
-            <span class="item-qty">${item.quantity}</span>
-          </div>
-          <div class="item-controls">
-            <button onclick="updateQty('${item.id}', ${item.quantity}-1)">-</button>
-            <button onclick="updateQty('${item.id}', ${item.quantity}+1)">+</button>
-            <button onclick="removeItem('${item.id}')">&times;</button>
-          </div>`;
-        container.appendChild(div);
-      });
-      totalEl.textContent = total.toFixed(2);
-    }
-    function updateQty(id, newQty) {
-      if(newQty<1) return removeItem(id);
-      const book = allBooks.find(b=>b.id===id);
-      if(!book || newQty>book.stock) return;
-      cart = cart.map(i=> i.id===id ? {...i,quantity:newQty} : i);
-      saveCart(); renderCart();
-    }
-    function removeItem(id) {
-      cart = cart.filter(i=>i.id!==id);
-      saveCart(); renderCart();
-    }
-
-    // Checkout
-    document.getElementById('checkoutBtn').onclick = async () => {
-      if(cart.length===0) return;
-      const statusEl = document.getElementById('orderStatus'); statusEl.textContent='';
-      const items = cart.map(i=>({ title:i.title, quantity:i.quantity, price:i.price }));
-      const total = cart.reduce((s,i)=> s+i.price*i.quantity,0);
-      try {
-        await db.collection('orders').add({ items, total, timestamp: firebase.firestore.FieldValue.serverTimestamp(), status:'pending' });
-        for(const i of cart) {
-          await db.collection('books').doc(i.id).update({ stock: firebase.firestore.FieldValue.increment(-i.quantity) });
+    // --- Utility Functions ---
+    function scrollToElement(id) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
         }
-        cart=[]; saveCart(); renderCart(); fetchBooks(); statusEl.textContent='Thank you for your order!';
-      } catch(err) { statusEl.textContent='Order failed.'; console.error(err); }
-    };
+    }
 
-    // Init
-    updateCartCount(); fetchBooks();
+    function toggleCart() {
+      const isOpen = cartPanel.classList.contains('open');
+      cartPanel.classList.toggle('open');
+      cartOverlay.classList.toggle('show');
+      if (!isOpen) {
+          renderCart();
+      }
+    }
+
+    function saveCart() {
+      localStorage.setItem('cart', JSON.stringify(cart));
+      updateCartCount();
+      checkoutBtn.disabled = cart.length === 0;
+    }
+
+    function updateCartCount() {
+      const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+      cartCountEl.textContent = count;
+    }
+
+    // Debounce function
+    function debounce(func, delay) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(func, delay);
+    }
+
+    // --- Core Application Logic ---
+
+    // Fetch & Render Books
+    async function fetchBooks() {
+      booksErrorEl.textContent = '';
+      booksGrid.innerHTML = '<p>Loading books...</p>';
+      try {
+        const snapshot = await db.collection(BOOKS_COLLECTION).get(); // v8 get()
+
+        if (snapshot.empty) {
+            booksGrid.innerHTML = '<p>No books found in the collection.</p>';
+            allBooks = [];
+            return;
+        }
+
+        // v8 snapshot.docs mapping is the same
+        allBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderBooks(allBooks);
+
+      } catch (error) {
+        console.error("Error fetching books:", error);
+        booksErrorEl.textContent = 'Failed to load books. Please check connection or Firestore configuration/rules.';
+        booksGrid.innerHTML = '';
+      }
+    }
+
+    function renderBooks(bookList) {
+      booksGrid.innerHTML = '';
+      if (bookList.length === 0 && allBooks.length > 0) {
+          booksGrid.innerHTML = '<p>No books match your search.</p>';
+      } else if (bookList.length === 0 && allBooks.length === 0 && booksErrorEl.textContent === '') {
+           // Only show 'No books available' if there wasn't already an error message
+           booksGrid.innerHTML = '<p>No books available at the moment.</p>';
+      } else {
+        bookList.forEach(book => {
+          const card = document.createElement('div');
+          card.className = 'book-card';
+          const stock = book.stock || 0;
+          const isOutOfStock = stock <= 0;
+
+          card.innerHTML = `
+            <img src="${book.imgURL || 'placeholder.jpg'}" alt="${book.title}" loading="lazy">
+            <div class="book-info">
+              <div>
+                <h3>${book.title}</h3>
+                <p>$${book.price ? book.price.toFixed(2) : 'N/A'}</p>
+              </div>
+              <div class="controls">
+                <input type="number" min="1" max="${stock}" value="1" class="qty" id="qty-${book.id}" aria-label="Quantity for ${book.title}" ${isOutOfStock ? 'disabled' : ''}>
+                <button class="add-btn" data-book-id="${book.id}" ${isOutOfStock ? 'disabled' : ''}>
+                  ${isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                </button>
+              </div>
+            </div>`;
+
+          const addButton = card.querySelector('.add-btn');
+          if (addButton && !isOutOfStock) {
+              addButton.addEventListener('click', () => {
+                  const qtyInput = card.querySelector(`#qty-${book.id}`);
+                  const quantity = parseInt(qtyInput.value, 10);
+                  if (quantity > 0) {
+                      addToCart(book.id, quantity);
+                       addButton.textContent = 'Added!';
+                       setTimeout(() => { addButton.textContent = 'Add to Cart'; }, 1000);
+                       qtyInput.value = '1';
+                  }
+              });
+          }
+          booksGrid.appendChild(card);
+        });
+      }
+    }
+
+    // Search functionality
+    function handleSearch() {
+        const query = searchInput.value.toLowerCase().trim();
+        const filteredBooks = allBooks.filter(book =>
+            book.title.toLowerCase().includes(query)
+        );
+        renderBooks(filteredBooks);
+    }
+
+    // Cart Functions
+    function addToCart(bookId, quantityToAdd) {
+        const book = allBooks.find(b => b.id === bookId);
+        if (!book || typeof book.price !== 'number') { // Added price check
+            console.error("Book data missing or invalid price for ID:", bookId, book);
+            alert("Error: Could not add item. Book data is missing or price is invalid.");
+            return;
+        }
+
+        const stock = book.stock || 0;
+        const existingCartItemIndex = cart.findIndex(item => item.id === bookId);
+        let currentCartQty = 0;
+
+        if (existingCartItemIndex > -1) {
+            currentCartQty = cart[existingCartItemIndex].quantity;
+        }
+
+        const potentialNewTotalQty = currentCartQty + quantityToAdd;
+
+        if (stock < potentialNewTotalQty) {
+            alert(`Sorry, only ${stock} "${book.title}" items available in total (you have ${currentCartQty} in cart). Cannot add ${quantityToAdd} more.`);
+            return;
+        }
+         if (stock < quantityToAdd && existingCartItemIndex === -1) {
+            alert(`Sorry, only ${stock} "${book.title}" items available. Cannot add ${quantityToAdd}.`);
+            return;
+        }
+
+        if (existingCartItemIndex > -1) {
+            cart[existingCartItemIndex].quantity = potentialNewTotalQty;
+        } else {
+            cart.push({
+                id: bookId,
+                title: book.title,
+                price: book.price,
+                quantity: quantityToAdd
+            });
+        }
+
+        saveCart();
+    }
+
+    function renderCart() {
+        cartItemsContainer.innerHTML = '';
+        let currentTotal = 0;
+
+        if (cart.length === 0) {
+            cartItemsContainer.innerHTML = '<p>Your cart is empty.</p>';
+            cartTotalEl.textContent = '0.00';
+            checkoutBtn.disabled = true;
+            return;
+        }
+
+        cart.forEach(item => {
+            // Ensure price is a number before calculation
+            const price = typeof item.price === 'number' ? item.price : 0;
+            const itemTotal = price * item.quantity;
+            currentTotal += itemTotal;
+            const bookInStock = allBooks.find(b => b.id === item.id)?.stock || 0;
+
+            const div = document.createElement('div');
+            div.className = 'cart-item';
+            div.innerHTML = `
+              <div class="item-info">
+                <strong>${item.title}</strong>
+                <span>$${price.toFixed(2)} x ${item.quantity} = $${itemTotal.toFixed(2)}</span>
+                ${item.quantity > bookInStock ? '<br><small style="color:red;">Note: Quantity exceeds current stock!</small>' : ''}
+              </div>
+              <div class="item-controls">
+                <button onclick="updateQty('${item.id}', ${item.quantity - 1})" aria-label="Decrease quantity of ${item.title}">-</button>
+                <span class="item-qty" aria-live="polite">${item.quantity}</span>
+                <button onclick="updateQty('${item.id}', ${item.quantity + 1})" ${item.quantity >= bookInStock ? 'disabled' : ''} aria-label="Increase quantity of ${item.title}">+</button>
+                <button class="remove-btn" onclick="removeItem('${item.id}')" aria-label="Remove ${item.title} from cart">&times;</button>
+              </div>`;
+            cartItemsContainer.appendChild(div);
+        });
+
+        cartTotalEl.textContent = currentTotal.toFixed(2);
+        checkoutBtn.disabled = false;
+    }
+
+    function updateQty(id, newQty) {
+        if (newQty < 1) {
+            return removeItem(id);
+        }
+
+        const book = allBooks.find(b => b.id === id);
+        const stock = book?.stock || 0;
+
+        if (newQty > stock) {
+            alert(`Sorry, only ${stock} items available for "${book?.title || 'this item'}".`);
+            return;
+        }
+
+        cart = cart.map(item =>
+            item.id === id ? { ...item, quantity: newQty } : item
+        );
+        saveCart();
+        renderCart();
+    }
+
+    function removeItem(id) {
+        cart = cart.filter(item => item.id !== id);
+        saveCart();
+        renderCart();
+    }
+
+    // Checkout Functionality
+    async function handleCheckout() {
+        if (cart.length === 0) {
+            alert("Your cart is empty.");
+            return;
+        }
+
+        checkoutBtn.disabled = true;
+        checkoutBtn.textContent = 'Processing...';
+        orderStatusEl.textContent = '';
+        orderStatusEl.className = '';
+
+        // --- !!! EXTREMELY IMPORTANT SECURITY WARNING !!! ---
+        // 1. SERVER-SIDE VALIDATION IS REQUIRED: Prices and final total MUST be
+        //    calculated and verified on the server (e.g., using Firebase Cloud Functions).
+        //    NEVER trust client-side calculations for financial transactions.
+        // 2. SECURE STOCK DECREMENT: Stock levels should ONLY be decremented server-side
+        //    AFTER payment is confirmed and the order is validated by the server.
+        //
+        // The following client-side batch write improves *consistency* (order + stock updates
+        // happen together or not at all *on the client*), but DOES NOT provide security
+        // against users manipulating prices or triggering stock updates without payment.
+        // --- !!! THIS CODE IS NOT PRODUCTION-READY FOR PAYMENTS WITHOUT SERVER-SIDE LOGIC !!! ---
+
+        const batch = db.batch(); // v8 batch()
+
+        let calculatedTotal = 0; // Client-side calculation (FOR REFERENCE ONLY)
+        const orderItems = [];
+
+        for (const item of cart) {
+             // Ensure price is valid before proceeding
+            if (typeof item.price !== 'number') {
+                 console.error("Invalid price for item during checkout:", item);
+                 orderStatusEl.textContent = `Error: Invalid price for item "${item.title}". Cannot proceed.`;
+                 orderStatusEl.className = 'error';
+                 checkoutBtn.disabled = false; // Re-enable button
+                 checkoutBtn.textContent = 'Checkout';
+                 return; // Stop the checkout process
+            }
+
+            calculatedTotal += item.price * item.quantity;
+            orderItems.push({
+                bookId: item.id,
+                title: item.title,
+                quantity: item.quantity,
+                pricePerItem: item.price // Price AT THE TIME OF ORDER (MUST BE VERIFIED SERVER-SIDE)
+            });
+
+            // Add stock update to batch (Still client-side initiated - see warning above)
+            const bookRef = db.collection(BOOKS_COLLECTION).doc(item.id); // v8 doc ref
+            batch.update(bookRef, {
+                stock: firebase.firestore.FieldValue.increment(-item.quantity) // v8 FieldValue.increment
+            });
+        }
+
+        // Add the new order document to the batch
+        const newOrderRef = db.collection(ORDERS_COLLECTION).doc(); // v8 auto-ID doc ref
+        batch.set(newOrderRef, {
+            items: orderItems,
+            total: calculatedTotal, // Client calculated total (MUST BE VERIFIED SERVER-SIDE)
+            orderTimestamp: firebase.firestore.FieldValue.serverTimestamp(), // v8 FieldValue.serverTimestamp
+            status: ORDER_STATUS_PENDING
+            // userId: '...' // Add if using authentication
+        });
+
+        try {
+            await batch.commit(); // Attempt to commit all batched operations
+
+            // --- Post-Commit Actions (Client-Side - IF Batch Succeeded) ---
+            cart = [];
+            saveCart();
+            renderCart();
+            orderStatusEl.textContent = 'Thank you! Your order has been placed successfully (pending server verification).';
+            orderStatusEl.className = 'success';
+            checkoutBtn.textContent = 'Checkout'; // Reset button
+
+            // Optimistically update UI, but server is the source of truth
+            await fetchBooks(); // Re-fetch books to show updated stock (optional)
+
+        } catch (error) {
+            console.error("Checkout batch commit failed:", error);
+            orderStatusEl.textContent = 'Order failed during processing. Please try again. No charges were made.';
+             orderStatusEl.className = 'error';
+            checkoutBtn.disabled = false; // Re-enable button on failure
+            checkoutBtn.textContent = 'Checkout';
+            // NOTE: If the batch commit fails, Firestore guarantees that NONE of the
+            // changes (order creation OR stock updates) were applied.
+        }
+    }
+
+
+    // --- Event Listeners ---
+    cartToggleButton.addEventListener('click', toggleCart);
+    cartCloseButton.addEventListener('click', toggleCart);
+    cartOverlay.addEventListener('click', toggleCart);
+    checkoutBtn.addEventListener('click', handleCheckout);
+
+    searchInput.addEventListener('input', () => {
+        debounce(handleSearch, DEBOUNCE_DELAY);
+    });
+
+
+    // --- Initial Load ---
+    if (currentYearEl) {
+        currentYearEl.textContent = new Date().getFullYear(); // Update copyright year
+    }
+    updateCartCount();
+    fetchBooks();
+    checkoutBtn.disabled = cart.length === 0;
+
+    // --- Make necessary functions globally available for inline HTML handlers ---
+    // (Best practice is to use addEventListener, but keeping these for existing inline calls)
+    window.updateQty = updateQty;
+    window.removeItem = removeItem;
+    window.scrollToElement = scrollToElement; // Keep if hero button uses onclick
+
   </script>
 </body>
 </html>
