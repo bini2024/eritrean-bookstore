@@ -287,7 +287,7 @@
     </div>
   </footer>
 
-  <script>
+ <script>
     // --- Firebase Configuration (Using your provided details) ---
     const firebaseConfig = {
       apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
@@ -322,7 +322,7 @@
         // --- Constants ---
         const BOOKS_COLLECTION = 'books';
         const ORDERS_COLLECTION = 'orders';
-        const ORDER_STATUS_PENDING = 'pending';
+        const ORDER_STATUS_PENDING = 'pending'; // Note: This constant is not currently used in handleCheckout/processOrder logic provided
         const DEBOUNCE_DELAY = 300; // ms for search debounce
 
         // --- Global State ---
@@ -658,36 +658,52 @@
                 return;
             }
 
-             // --- Client-Side Validation Before Calling Backend ---
-             // This is a first line of defense, but server MUST re-validate everything.
-             const itemsToProcess = [];
-             for (const item of cart) {
+            // --- Client-Side Validation Before Calling Backend ---
+            // This is a first line of defense, but server MUST re-validate everything.
+            const itemsToProcess = [];
+            let hasInvalidItems = false; // Flag to indicate if any invalid items were found
+
+            for (const item of cart) {
                 // Basic validation of cart item structure
                 if (!item || !item.id || typeof item.quantity !== 'number' || item.quantity <= 0) {
-                     alert(`Cannot checkout: Invalid item data in cart.`);
-                      console.error("Invalid item in cart during client-side pre-checkout validation:", item);
-                      orderStatusEl.textContent = 'Error: Invalid item in cart.'; // Display status
-                      orderStatusEl.className = 'error';
-                      return; // Stop checkout
+                    // Found an invalid item. Alert user, log error, skip THIS item, but continue the loop.
+                    alert(`Skipping invalid item in cart.`); // More specific alert
+                    console.error("Invalid item found in cart during client-side validation:", item);
+                    hasInvalidItems = true; // Mark that we found at least one invalid item
+                    // >>> FIX: Use continue instead of return <<<
+                    continue; // Skip the rest of the loop iteration for this item
                 }
                 // Only send bookId and quantity to the backend for security
                 itemsToProcess.push({
                     bookId: item.id,
                     quantity: item.quantity
                 });
+            }
 
-                // Optional: You could add a check against the latest fetched allBooks stock here
-                // const book = allBooks.find(b => b.id === item.id);
-                // if (!book || item.quantity > (book.stock || 0)) { ... alert out of stock ... return; }
-                // But the *definitive* stock check happens server-side.
-             }
+            // >>> ADDED CONSOLE LOG FOR DEBUGGING <<<
+            console.log("Data being sent to processOrder function:", itemsToProcess);
+            // >>> END ADDITION <<<
 
-             if (itemsToProcess.length === 0) {
-                 alert("Your cart is empty after validation.");
-                 renderCart(); // Re-render in case validation removed items conceptually
-                 return;
-             }
 
+            // After checking all items in the cart...
+            if (itemsToProcess.length === 0) {
+                // This happens if the original cart was empty, or if ALL items were invalid.
+                let message = "Your cart is empty.";
+                if (hasInvalidItems) {
+                     message = "Your cart contains no valid items to checkout."; // More specific if items were skipped
+                }
+                alert(message);
+                orderStatusEl.textContent = message; // Update status message
+                orderStatusEl.className = 'error'; // Use error style if no valid items
+                renderCart(); // Re-render in case invalid items were conceptually removed
+                // Reset checkout button state if we are stopping here
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = 'Checkout';
+                return; // Stop checkout process as there's nothing to send
+            }
+
+            // If we reached here, itemsToProcess has at least one valid item.
+            // Proceed with calling the Cloud Function.
 
             checkoutBtn.disabled = true;
             checkoutBtn.textContent = 'Processing Order...';
@@ -745,14 +761,19 @@
                 // Handle errors during the Cloud Function call itself (e.g., network error, function not found)
                 console.error("Error calling Cloud Function:", error);
                  // Firebase Functions errors have specific structures you can parse
-                 if (error.code === 'functions/not-found') {
-                     orderStatusEl.textContent = 'Error: Checkout service not found. Has the "processOrder" Cloud Function been deployed?';
-                 } else if (error.code === 'functions/unavailable') {
-                      orderStatusEl.textContent = 'Checkout service is temporarily unavailable. Please try again later.';
-                 } else {
-                      orderStatusEl.textContent = `An unexpected error occurred: ${error.message || 'Please see console.'}`;
+                 let errorMessage = 'An unexpected error occurred.';
+                 if (error.code) {
+                     errorMessage += ` Code: ${error.code}.`;
                  }
-                 orderStatusEl.className = 'error';
+                 // Append message only if it's different from the default unexpected error text
+                 if (error.message && !errorMessage.includes(error.message)) {
+                      errorMessage += ` Message: ${error.message}.`;
+                 }
+                 errorMessage += ' Please see console.';
+
+
+                orderStatusEl.textContent = errorMessage;
+                orderStatusEl.className = 'error';
 
             } finally {
                  checkoutBtn.disabled = false; // Re-enable button
@@ -786,6 +807,8 @@
         window.updateQty = updateQty;
         window.removeItem = removeItem;
         window.scrollToElement = scrollToElement; // Keep if hero button uses onclick
+        // Add handleCheckout to window if it's ever called via onclick=handleCheckout()
+        // window.handleCheckout = handleCheckout; // Uncomment if you use onclick="handleCheckout()" on the button
 
     } catch (initError) {
         // Catch potential errors during Firebase SDK initialization or script loading
