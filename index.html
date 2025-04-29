@@ -287,7 +287,7 @@
     </div>
   </footer>
 
- <script>
+<script>
     // --- Firebase Configuration (Using your provided details) ---
     const firebaseConfig = {
       apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
@@ -670,7 +670,7 @@
                     alert(`Skipping invalid item in cart.`); // More specific alert
                     console.error("Invalid item found in cart during client-side validation:", item);
                     hasInvalidItems = true; // Mark that we found at least one invalid item
-                    // >>> FIX: Use continue instead of return <<<
+                    // FIX: Use continue instead of return
                     continue; // Skip the rest of the loop iteration for this item
                 }
                 // Only send bookId and quantity to the backend for security
@@ -680,9 +680,9 @@
                 });
             }
 
-            // >>> ADDED CLIENT-SIDE CONSOLE LOG FOR DEBUGGING <<<
+            // ADDED CLIENT-SIDE CONSOLE LOG FOR DEBUGGING
             console.log("Data being sent to processOrder function:", itemsToProcess);
-            // >>> END ADDITION <<<
+            // END ADDITION
 
 
             // After checking all items in the cart...
@@ -712,14 +712,9 @@
 
 
             // Prepare data to send to the Cloud Function
-            // Send minimal data; the function will look up actual prices/stock securely.
-            const orderData = {
-                items: itemsToProcess
-                // Add customer details here if you collect them on the client (but validate/trust server-side)
-                // customerInfo: { name: '...', email: '...' }
-                // Add payment method details if integrating payment gateway on client (e.g., Stripe PaymentMethod ID)
-                // paymentMethodId: '...'
-            };
+            // POTENTIAL WORKAROUND: Send the array directly instead of wrapped in { items: ... }
+            const orderData = itemsToProcess; // Send the array directly
+
 
             try {
                  // --- Call the Secure Cloud Function ---
@@ -727,7 +722,7 @@
                  // Make sure your Cloud Function is deployed and callable!
                  const processOrderFunction = functions.httpsCallable('processOrder');
 
-                 // Pass the order data to the Cloud Function
+                 // Pass the adjusted order data (the array directly) to the Cloud Function
                  const result = await processOrderFunction(orderData);
 
                 // --- Handle the response from the Cloud Function ---
