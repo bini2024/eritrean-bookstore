@@ -712,8 +712,14 @@
 
 
             // Prepare data to send to the Cloud Function
-            // POTENTIAL WORKAROUND: Send the array directly instead of wrapped in { items: ... }
-            const orderData = itemsToProcess; // Send the array directly
+            // Revert to sending the standard { items: [...] } structure
+            const orderData = {
+                items: itemsToProcess
+                // Add customer details here if you collect them on the client (but validate/trust server-side)
+                // customerInfo: { name: '...', email: '...' }
+                // Add payment method details if integrating payment gateway on client (e.g., Stripe PaymentMethod ID)
+                // paymentMethodId: '...'
+            };
 
 
             try {
@@ -722,15 +728,15 @@
                  // Make sure your Cloud Function is deployed and callable!
                  const processOrderFunction = functions.httpsCallable('processOrder');
 
-                 // Pass the adjusted order data (the array directly) to the Cloud Function
-                 const result = await processOrderFunction(orderData);
+                 // Pass the order data to the Cloud Function
+                 const result = await processOrderFunction(orderData); // Sending { items: [...] }
 
-                // --- Handle the response from the Cloud Function ---
-                // The Cloud Function should return data indicating success/failure/payment details.
-                // Access the data via result.data
-                 const responseData = result.data;
 
-                 if (responseData.success) {
+                 // --- Handle the response from the Cloud Function ---
+                 // Access the data via result.data
+                 const responseData = result.data; // <--- TypeError happens here if result.data is null
+
+                 if (responseData && responseData.success) { // Check if responseData exists and has success property
                      // Order was processed securely server-side
                      cart = []; // Clear client-side cart
                      saveCart(); // Save empty cart to localStorage
@@ -747,9 +753,10 @@
 
                  } else {
                      // Cloud Function returned a failure response (e.g., out of stock, payment failed)
-                     orderStatusEl.textContent = responseData.message || 'Order processing failed.';
+                      // Check if responseData exists to avoid TypeError when accessing responseData.message
+                     orderStatusEl.textContent = (responseData && responseData.message) ? responseData.message : 'Order processing failed.';
                      orderStatusEl.className = 'error';
-                     console.error("Cloud Function checkout failed:", responseData.error || responseData); // Log more detail if available
+                     console.error("Cloud Function checkout failed:", responseData || "No response data received"); // Log responseData or a message
                  }
 
             } catch (error) {
