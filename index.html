@@ -712,7 +712,7 @@
 
 
             // Prepare data to send to the Cloud Function
-            // Revert to sending the standard { items: [...] } structure
+            // Sending the standard { items: [...] } structure
             const orderData = {
                 items: itemsToProcess
                 // Add customer details here if you collect them on the client (but validate/trust server-side)
@@ -729,12 +729,14 @@
                  const processOrderFunction = functions.httpsCallable('processOrder');
 
                  // Pass the order data to the Cloud Function
-                 const result = await processOrderFunction(orderData); // Sending { items: [...] }
+                 const result = await processOrderFunction(orderData);
 
 
                  // --- Handle the response from the Cloud Function ---
                  // Access the data via result.data
-                 const responseData = result.data; // <--- TypeError happens here if result.data is null
+                 // Added robust check for result and result.data
+                 const responseData = result && result.data ? result.data : null;
+
 
                  if (responseData && responseData.success) { // Check if responseData exists and has success property
                      // Order was processed securely server-side
@@ -746,39 +748,53 @@
                      orderStatusEl.className = 'success';
 
                      // Re-fetch book list to show updated stock (UI update)
-                     fetchBooks();
+                     fetchBooks(); // Triggers visual update of stock
 
                      // Optionally close the cart panel
                      // setTimeout(() => { toggleCart(); }, 2000);
 
                  } else {
-                     // Cloud Function returned a failure response (e.g., out of stock, payment failed)
-                      // Check if responseData exists to avoid TypeError when accessing responseData.message
-                     orderStatusEl.textContent = (responseData && responseData.message) ? responseData.message : 'Order processing failed.';
-                     orderStatusEl.className = 'error';
-                     console.error("Cloud Function checkout failed:", responseData || "No response data received"); // Log responseData or a message
+                     // Handle cases where result.data is null/undefined OR success is false
+                     orderStatusEl.textContent = (responseData && responseData.message) ? responseData.message : 'Order processing completed, but confirmation failed. Check Firestore.'; // More informative message
+                     orderStatusEl.className = 'warning'; // Use warning if stock updated but response was bad
+                     console.error("Cloud Function checkout completed, but response data unexpected:", responseData || "No response data received");
+                      // Even on potential success (stock update), keep button disabled or show status clearly
                  }
 
             } catch (error) {
-                // Handle errors during the Cloud Function call itself (e.g., network error, function not found)
+                // Handle errors during the Cloud Function call itself (e.g., network error, function not found, HttpsError)
                 console.error("Error calling Cloud Function:", error);
-                 // Firebase Functions errors have specific structures you can parse
+                 // Firebase Functions HttpsErrors will be caught here
                  let errorMessage = 'An unexpected error occurred.';
                  if (error.code) {
-                     errorMessage += ` Code: ${error.code}.`;
+                      // Use a more user-friendly message for the specific error
+                     if (error.code === 'invalid-argument' && error.message.includes('Order must contain at least one item')) {
+                         errorMessage = 'Checkout failed: Your cart is empty or invalid items were skipped.';
+                     } else if (error.code === 'resource-exhausted' && error.message.includes('Insufficient stock')) {
+                         errorMessage = 'Checkout failed: ' + error.message; // Use the specific insufficient stock message
+                     } else {
+                         // For other Firebase Errors, provide code and message
+                         errorMessage += ` Code: ${error.code}.`;
+                          if (error.message && !errorMessage.includes(error.message)) {
+                                errorMessage += ` Message: ${error.message}.`;
+                          }
+                          errorMessage += ' Please see console.';
+                     }
+                 } else if (error.message) {
+                     // For non-Firebase Error objects, just show the message
+                      errorMessage = 'An error occurred: ' + error.message + '. Please see console.';
+                 } else {
+                      // Generic error message
+                      errorMessage = 'An unexpected error occurred during checkout. Please see console.';
                  }
-                 // Append message only if it's different from the default unexpected error text
-                 if (error.message && !errorMessage.includes(error.message)) {
-                      errorMessage += ` Message: ${error.message}.`;
-                 }
-                 errorMessage += ' Please see console.';
 
 
                 orderStatusEl.textContent = errorMessage;
                 orderStatusEl.className = 'error';
 
             } finally {
-                 checkoutBtn.disabled = false; // Re-enable button
+                 // Always re-enable button after attempt
+                 checkoutBtn.disabled = false;
                  checkoutBtn.textContent = 'Checkout';
             }
         }
