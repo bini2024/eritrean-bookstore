@@ -311,7 +311,8 @@
 
         const app = firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore(); // Use v8 syntax
-        const functions = firebase.functions(); // Use v8 syntax for Cloud Functions
+        // const functions = firebase.functions(); // Not needed for HTTP triggers
+
 
         // If you are using a region other than default (us-central1), set it like this:
         // functions.useFunctionsEmulator('http://localhost:5001'); // For local testing
@@ -650,160 +651,143 @@
             renderCart(); // Re-render cart after removal
         }
 
-        // --- Secure Checkout Functionality (Client-Side Call to Cloud Function) ---
+        // --- Secure Checkout Functionality (Client-Side Call to HTTP Trigger Cloud Function) ---
         async function handleCheckout() {
             if (cart.length === 0) {
                 alert("Your cart is empty.");
                 return;
             }
 
-            // --- Client-Side Validation Before Calling Backend ---
-            // This is a first line of defense, but server MUST re-validate everything.
             const itemsToProcess = [];
-            let hasInvalidItems = false; // Flag to indicate if any invalid items were found
+            let hasInvalidItems = false;
 
             for (const item of cart) {
-                // Basic validation of cart item structure
                 if (!item || !item.id || typeof item.quantity !== 'number' || item.quantity <= 0) {
-                    // Found an invalid item. Alert user, log error, skip THIS item, but continue the loop.
-                    alert(`Skipping invalid item in cart.`); // More specific alert
+                    alert(`Skipping invalid item in cart.`);
                     console.error("Invalid item found in cart during client-side validation:", item);
-                    hasInvalidItems = true; // Mark that we found at least one invalid item
-                    // FIX: Use continue instead of return
-                    continue; // Skip the rest of the loop iteration for this item
+                    hasInvalidItems = true;
+                    continue;
                 }
-                // Only send bookId and quantity to the backend for security
                 itemsToProcess.push({
                     bookId: item.id,
                     quantity: item.quantity
                 });
             }
 
-            // ADDED CLIENT-SIDE CONSOLE LOG FOR DEBUGGING
             console.log("Data being sent to processOrder function:", itemsToProcess);
-            // END ADDITION
 
-
-            // After checking all items in the cart...
             if (itemsToProcess.length === 0) {
-                // This happens if the original cart was empty, or if ALL items were invalid.
                 let message = "Your cart is empty.";
                 if (hasInvalidItems) {
-                     message = "Your cart contains no valid items to checkout."; // More specific if items were skipped
+                     message = "Your cart contains no valid items to checkout.";
                 }
                 alert(message);
-                orderStatusEl.textContent = message; // Update status message
-                orderStatusEl.className = 'error'; // Use error style if no valid items
-                renderCart(); // Re-render in case invalid items were conceptually removed
-                // Reset checkout button state if we are stopping here
+                orderStatusEl.textContent = message;
+                orderStatusEl.className = 'error';
+                renderCart();
                 checkoutBtn.disabled = false;
                 checkoutBtn.textContent = 'Checkout';
-                return; // Stop checkout process as there's nothing to send
+                return;
             }
-
-            // If we reached here, itemsToProcess has at least one valid item.
-            // Proceed with calling the Cloud Function.
 
             checkoutBtn.disabled = true;
             checkoutBtn.textContent = 'Processing Order...';
             orderStatusEl.textContent = 'Processing your order...';
-            orderStatusEl.className = 'info'; // Use info style for processing
+            orderStatusEl.className = 'info';
 
 
-            // Prepare data to send to the Cloud Function
-            // Sending the standard { items: [...] } structure
+            // Prepare data to send in the HTTP request body
+            // Send the standard { items: [...] } structure
             const orderData = {
                 items: itemsToProcess
-                // Add customer details here if you collect them on the client (but validate/trust server-side)
-                // customerInfo: { name: '...', email: '...' }
-                // Add payment method details if integrating payment gateway on client (e.g., Stripe PaymentMethod ID)
-                // paymentMethodId: '...'
+                // Add customer details or payment info here if needed for the function
             };
+
+            // >>> REPLACE WITH YOUR ACTUAL CLOUD FUNCTION HTTP TRIGGER URL <<<
+            // Get this URL from Firebase Console -> Functions -> Dashboard -> your_function_name
+            const cloudFunctionUrl = 'https://us-central1-eritrean-bookstore.cloudfunctions.net/processOrder'; // <-- !!! REPLACE THIS URL !!!
 
 
             try {
-                 // --- Call the Secure Cloud Function ---
-                 // Replace 'processOrder' with the actual name of your deployed Cloud Function
-                 // Make sure your Cloud Function is deployed and callable!
-                 const processOrderFunction = functions.httpsCallable('processOrder');
+                 // --- Call the HTTP Trigger Cloud Function using fetch ---
+                 const response = await fetch(cloudFunctionUrl, {
+                     method: 'POST', // Use POST method
+                     headers: {
+                         'Content-Type': 'application/json' // Specify content type is JSON
+                     },
+                     body: JSON.stringify(orderData) // Send data as a JSON string in the body
+                 });
 
-                 // Pass the order data to the Cloud Function
-                 const result = await processOrderFunction(orderData);
+                // Check if the HTTP response was successful (status 2xx)
+                if (!response.ok) {
+                     // If response is not ok (e.g., 400, 404, 500), it's an HTTP error
+                     // Try to parse the error response body if it's JSON
+                     const errorResponseData = await response.json().catch(() => null); // Parse JSON or set to null on failure
+                     console.error("HTTP error calling Cloud Function:", response.status, errorResponseData);
+
+                     let errorMessage = `Checkout failed: Server returned status ${response.status}.`;
+                     if (errorResponseData && errorResponseData.message) {
+                          // Use the error message from the function's JSON response if available
+                         errorMessage = `Checkout failed: ${errorResponseData.message}`;
+                     } else if (response.statusText) {
+                         errorMessage += ` ${response.statusText}`;
+                     }
 
 
-                 // --- Handle the response from the Cloud Function ---
-                 // Access the data via result.data
-                 // Added robust check for result and result.data
-                 const responseData = result && result.data ? result.data : null;
+                     orderStatusEl.textContent = errorMessage;
+                     orderStatusEl.className = 'error';
+                      // Re-fetch books in case of partial stock update (unlikely with transactions)
+                     fetchBooks();
 
-
-                 if (responseData && responseData.success) { // Check if responseData exists and has success property
-                     // Order was processed securely server-side
-                     cart = []; // Clear client-side cart
-                     saveCart(); // Save empty cart to localStorage
-                     renderCart(); // Update UI to show empty cart
-
-                     orderStatusEl.textContent = responseData.message || 'Order placed successfully!';
-                     orderStatusEl.className = 'success';
-
-                     // Re-fetch book list to show updated stock (UI update)
-                     fetchBooks(); // Triggers visual update of stock
-
-                     // Optionally close the cart panel
-                     // setTimeout(() => { toggleCart(); }, 2000);
 
                  } else {
-                     // Handle cases where result.data is null/undefined OR success is false
-                     orderStatusEl.textContent = (responseData && responseData.message) ? responseData.message : 'Order processing completed, but confirmation failed. Check Firestore.'; // More informative message
-                     orderStatusEl.className = 'warning'; // Use warning if stock updated but response was bad
-                     console.error("Cloud Function checkout completed, but response data unexpected:", responseData || "No response data received");
-                      // Even on potential success (stock update), keep button disabled or show status clearly
+                     // HTTP response is OK (status 200)
+                     const responseData = await response.json(); // Parse the JSON response body
+
+                     // Check the 'status' field from the function's JSON response
+                     if (responseData && responseData.status === 'success') {
+                         // Order was processed successfully based on the function's response payload
+                         cart = []; // Clear client-side cart
+                         saveCart(); // Save empty cart to localStorage
+                         renderCart(); // Update UI to show empty cart
+
+                         orderStatusEl.textContent = responseData.message || 'Order placed successfully!';
+                         orderStatusEl.className = 'success';
+
+                         fetchBooks(); // Re-fetch book list to show updated stock
+
+                     } else {
+                         // Response was 200 OK, but the function's internal 'status' was not 'success'
+                         // This handles cases where the function might return { status: 'error', ... } with a 200 status
+                         console.error("Cloud Function returned success HTTP status but indicates error internally:", responseData);
+                         orderStatusEl.textContent = (responseData && responseData.message) ? responseData.message : 'Order processing completed with unexpected status. Check Firestore.';
+                         orderStatusEl.className = 'warning';
+                         // Fetch books as the transaction might have completed even with a weird response
+                         fetchBooks();
+                     }
                  }
 
             } catch (error) {
-                // Handle errors during the Cloud Function call itself (e.g., network error, function not found, HttpsError)
-                console.error("Error calling Cloud Function:", error);
-                 // Firebase Functions HttpsErrors will be caught here
-                 let errorMessage = 'An unexpected error occurred.';
-                 if (error.code) {
-                      // Use a more user-friendly message for the specific error
-                     if (error.code === 'invalid-argument' && error.message.includes('Order must contain at least one item')) {
-                         errorMessage = 'Checkout failed: Your cart is empty or invalid items were skipped.';
-                     } else if (error.code === 'resource-exhausted' && error.message.includes('Insufficient stock')) {
-                         errorMessage = 'Checkout failed: ' + error.message; // Use the specific insufficient stock message
-                     } else {
-                         // For other Firebase Errors, provide code and message
-                         errorMessage += ` Code: ${error.code}.`;
-                          if (error.message && !errorMessage.includes(error.message)) {
-                                errorMessage += ` Message: ${error.message}.`;
-                          }
-                          errorMessage += ' Please see console.';
-                     }
-                 } else if (error.message) {
-                     // For non-Firebase Error objects, just show the message
-                      errorMessage = 'An error occurred: ' + error.message + '. Please see console.';
-                 } else {
-                      // Generic error message
-                      errorMessage = 'An unexpected error occurred during checkout. Please see console.';
-                 }
-
-
-                orderStatusEl.textContent = errorMessage;
+                // Handle network errors or issues during fetch/parsing
+                console.error("Error during fetch or parsing response:", error);
+                orderStatusEl.textContent = 'A network error occurred during checkout. Please try again.';
                 orderStatusEl.className = 'error';
 
             } finally {
-                 // Always re-enable button after attempt
                  checkoutBtn.disabled = false;
                  checkoutBtn.textContent = 'Checkout';
             }
         }
+        // ... (rest of event listeners, initial load, window assignments) ...
+
 
         // --- Event Listeners ---
         cartToggleButton.addEventListener('click', toggleCart);
         cartCloseButton.addEventListener('click', toggleCart);
-        // Close cart also when clicking outside the panel
         cartOverlay.addEventListener('click', toggleCart);
+        // Use addEventListener for checkout button
         checkoutBtn.addEventListener('click', handleCheckout);
+
 
         // Add event listener for search input with debounce
         searchInput.addEventListener('input', () => {
@@ -818,14 +802,15 @@
         fetchBooks(); // Load books from Firestore on page load
         // checkoutBtn disabled state is handled by saveCart() call above
 
+
         // --- Make necessary functions globally available for inline HTML handlers ---
         // Note: Using addEventListener is generally preferred over inline handlers (onclick="...").
         // Keeping these for compatibility with your HTML structure.
         window.updateQty = updateQty;
         window.removeItem = removeItem;
         window.scrollToElement = scrollToElement; // Keep if hero button uses onclick
-        // Add handleCheckout to window if it's ever called via onclick=handleCheckout()
-        // window.handleCheckout = handleCheckout; // Uncomment if you use onclick="handleCheckout()" on the button
+        window.handleCheckout = handleCheckout; // Ensure this is assigned if you use onclick="handleCheckout()"
+
 
     } catch (initError) {
         // Catch potential errors during Firebase SDK initialization or script loading
