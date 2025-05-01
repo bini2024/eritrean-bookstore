@@ -286,7 +286,7 @@
        <p>&copy; <span id="currentYear">2025</span> <strong>Eritrean Bookstore</strong>. All rights reserved.</p>
     </div>
   </footer>
-<script>
+  <script>
     // --- Firebase Configuration (Using your provided details) ---
     const firebaseConfig = {
       apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
@@ -300,8 +300,11 @@
 
     // --- Initialize Firebase (v8 Compat SDKs are expected) ---
     // Make sure you have included the necessary v8 compat scripts in the <head>:
-    // firebase-app-compat.js, firebase-firestore-compat.js, firebase-functions-compat.js
-    // If implementing customer login, also include firebase-auth-compat.js
+    // <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    // <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    // <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script> // Not strictly needed for HTTP trigger but good to have if you use other functions
+    // Also include Stripe.js: <script src="https://js.stripe.com/v3/"></script>
+
 
     try {
         // Check if firebase object exists, indicating SDKs are loaded
@@ -347,6 +350,20 @@
         const booksErrorEl = document.getElementById('booksError');
         const currentYearEl = document.getElementById('currentYear');
 
+        // DOM elements for payment form (Ensure these IDs exist in your HTML)
+        const paymentForm = document.getElementById('payment-form');
+        const paymentElement = document.getElementById('payment-element');
+        const paymentMessage = document.getElementById('payment-message');
+        const paymentSubmitButton = paymentForm ? paymentForm.querySelector('button[type="submit"]') : null; // Get the submit button inside the form
+
+
+        // --- Stripe Initialization ---
+        // Initialize Stripe with your Publishable Key (starts with pk_test_ or pk_live_)
+        // Replace 'pk_test_YOUR_PUBLISHABLE_KEY' with your actual Stripe Publishable Key
+        const stripe = Stripe('pk_test_YOUR_PUBLISHABLE_KEY'); // <-- !!! REPLACE THIS WITH YOUR PUBLISHABLE KEY !!!
+        let paymentIntentClientSecret = null; // Variable to hold the client secret received from the function
+        let elements; // Variable to hold the Stripe Elements instance
+
 
         // --- Utility Functions ---
         function scrollToElement(id) {
@@ -362,6 +379,9 @@
           cartOverlay.classList.toggle('show');
           if (!isOpen) {
               renderCart(); // Render cart content only when opening
+              // Hide payment form when opening cart initially
+              if (paymentForm) paymentForm.style.display = 'none';
+              if (paymentMessage) paymentMessage.textContent = '';
           }
         }
 
@@ -533,7 +553,7 @@
 
             const potentialNewTotalQty = currentCartQty + quantityToAdd;
 
-            // Check against current stock *in the database* (client-side check - subject to race conditions)
+            // Client-side stock check (subject to race conditions)
              // A truly secure check happens server-side during checkout
             if (book.stock < potentialNewTotalQty) {
                 alert(`Sorry, only ${book.stock} "${book.title}" items available in total. You already have ${currentCartQty} in your cart.`);
@@ -651,13 +671,163 @@
             renderCart(); // Re-render cart after removal
         }
 
-        // --- Secure Checkout Functionality (Client-Side Call to HTTP Trigger Cloud Function) ---
+        // --- Initialize Stripe Payment Element ---
+        // Call this after successfully getting the client secret from the Cloud Function
+        async function initializePaymentElement(clientSecret) {
+            if (!clientSecret) {
+                console.error("Client secret is missing for payment element initialization.");
+                // Display an error message to the user
+                if (paymentMessage) {
+                    paymentMessage.textContent = "Unable to set up payment form. Please try again.";
+                    paymentMessage.style.color = 'red';
+                }
+                if (paymentForm) paymentForm.style.display = 'none'; // Hide form if init fails
+                return null; // Return null if initialization failed
+            }
+
+            // Assume you have a div with id="payment-element" in your HTML inside the cart panel
+            // Clear previous instances if the user opens/closes the cart or retries
+            if (paymentElement) paymentElement.innerHTML = '';
+            if (paymentMessage) paymentMessage.textContent = ''; // Clear previous messages
+
+
+            const appearance = {
+                theme: 'stripe', // or 'flat', 'night'
+                // You can customize appearance further: https://stripe.com/docs/elements/appearance-api
+            };
+
+            // Create a Stripe Elements instance using the client secret
+            elements = stripe.elements({ appearance, clientSecret });
+
+            // Create and mount the Payment Element UI
+            const paymentElementInstance = elements.create('payment');
+            if (paymentElement) {
+                paymentElementInstance.mount(paymentElement);
+                // Show the payment form if successfully initialized
+                 if (paymentForm) paymentForm.style.display = 'block';
+                 console.log("Stripe Payment Element mounted.");
+
+                 // Re-enable the payment submit button if it exists
+                 if(paymentSubmitButton) paymentSubmitButton.disabled = false;
+
+            } else {
+                 console.error("Payment element container #payment-element not found in HTML.");
+                 if (paymentMessage) {
+                      paymentMessage.textContent = "Payment form container not found in HTML.";
+                      paymentMessage.style.color = 'red';
+                 }
+                 if (paymentForm) paymentForm.style.display = 'none'; // Hide form
+                 return null; // Return null if container is missing
+            }
+
+            return elements; // Return elements instance for later use in confirmPayment
+        }
+
+
+        // --- Confirm Payment with Stripe ---
+        // Called when the user submits the payment form
+        async function confirmPayment() {
+            if (!paymentIntentClientSecret || !elements) {
+                console.error("Client secret or elements not available for payment confirmation.");
+                if (paymentMessage) {
+                    paymentMessage.textContent = "Payment cannot be confirmed. Missing details.";
+                    paymentMessage.style.color = 'red';
+                }
+                 // Re-enable payment form submit button
+                 if(paymentSubmitButton) paymentSubmitButton.disabled = false;
+                return;
+            }
+
+            // Disable the payment form submission button to prevent double clicks
+             if(paymentSubmitButton) paymentSubmitButton.disabled = true;
+             if(paymentMessage) {
+                 paymentMessage.textContent = 'Processing payment...';
+                 paymentMessage.style.color = 'inherit'; // Reset color
+             }
+
+
+            // Use the Stripe.js confirmPayment method to finalize the payment
+            const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+                elements, // The elements instance containing the payment form data
+                clientSecret: paymentIntentClientSecret, // The client secret received from your Cloud Function
+                confirmParams: {
+                    // return_url specifies where to redirect the customer after payment confirmation
+                    // if required (e.g., 3D Secure). It must be on your domain.
+                    // For this example, we'll redirect back to the same page.
+                    // In production, you might have a dedicated success page.
+                     return_url: window.location.href, // Redirects back to the current page URL
+                },
+                redirect: 'if_required', // Redirects the user if the payment requires additional action (like 3D Secure)
+            });
+
+            if (stripeError) {
+                // This point will only be reached if there is an immediate error when
+                // confirming the payment. Otherwise, the customer will be redirected.
+                if (paymentMessage) {
+                    paymentMessage.textContent = stripeError.message; // Display Stripe's user-friendly error message
+                    paymentMessage.style.color = 'red';
+                }
+                console.error("Stripe payment confirmation failed:", stripeError);
+
+                // IMPORTANT: In a real production app, you should ideally inform your server
+                // about this failed payment by calling another Cloud Function or sending a fetch request.
+                // This would update the order status in Firestore to 'failed_payment'.
+                // For this example, we rely on the Stripe webhook to update the order status.
+
+                // Re-enable the payment form submission button
+                 if(paymentSubmitButton) paymentSubmitButton.disabled = false;
+
+
+            } else {
+                // Payment succeeded client-side.
+                // Note: This does NOT guarantee the payment has been captured or finalized server-side.
+                // You MUST rely on Stripe webhooks for final payment confirmation and order fulfillment.
+                if (paymentMessage) {
+                     paymentMessage.textContent = 'Payment successful! Finalizing order...'; // Updated message
+                     paymentMessage.style.color = 'green';
+                }
+                console.log("Stripe payment confirmation successful (client-side):", paymentIntent);
+
+                // In a real app, you would now wait for the 'payment_intent.succeeded' webhook
+                // on your server to fulfill the order (deduct stock, send email, etc.).
+                // For this simplified example WITHOUT webhooks:
+                // We will clear the cart and update UI based on client-side confirmation,
+                // but stock deduction happens via webhook.
+
+                // Clear cart and update UI assuming success (simplification for demo)
+                 cart = [];
+                 saveCart(); // Saves empty cart to localStorage
+                 renderCart(); // Updates cart UI to show empty cart
+
+                 // Update the main order status message
+                 orderStatusEl.textContent = 'Payment confirmed. Order is being finalized (check Firestore via webhook).'; // Updated message
+                 orderStatusEl.className = 'success';
+
+                 // Do NOT call fetchBooks() here, as stock is updated via webhook server-side
+                 // fetchBooks(); // REMOVED
+
+                // Hide the payment form after success
+                 if (paymentForm) paymentForm.style.display = 'none';
+
+                // Re-enable the main checkout button
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = 'Checkout';
+
+                 // Optionally redirect the user to an order success page
+                 // window.location.href = '/order-success.html?order_id=' + paymentIntent.metadata.order_id; // Example redirect
+            }
+        }
+
+
+        // --- Secure Checkout Flow (Initiated by clicking the main Checkout button) ---
+        // This function calls the Cloud Function to create the Order and Payment Intent.
         async function handleCheckout() {
             if (cart.length === 0) {
                 alert("Your cart is empty.");
                 return;
             }
 
+            // Client-Side Validation: Basic check of cart items before sending to backend
             const itemsToProcess = [];
             let hasInvalidItems = false;
 
@@ -666,8 +836,9 @@
                     alert(`Skipping invalid item in cart.`);
                     console.error("Invalid item found in cart during client-side validation:", item);
                     hasInvalidItems = true;
-                    continue;
+                    continue; // Skip this invalid item, but continue checking others
                 }
+                // Only send bookId and quantity to the backend for security
                 itemsToProcess.push({
                     bookId: item.id,
                     quantity: item.quantity
@@ -684,109 +855,155 @@
                 alert(message);
                 orderStatusEl.textContent = message;
                 orderStatusEl.className = 'error';
-                renderCart();
+                renderCart(); // Re-render in case invalid items were conceptually removed
                 checkoutBtn.disabled = false;
                 checkoutBtn.textContent = 'Checkout';
-                return;
+                return; // Stop checkout process as there's nothing valid to send
             }
 
+            // If we reached here, itemsToProcess has at least one valid item.
+            // Proceed with calling the Cloud Function.
+
+            // Disable the main checkout button and show processing message
             checkoutBtn.disabled = true;
             checkoutBtn.textContent = 'Processing Order...';
             orderStatusEl.textContent = 'Processing your order...';
             orderStatusEl.className = 'info';
+            if (paymentMessage) paymentMessage.textContent = ''; // Clear payment messages
 
 
             // Prepare data to send in the HTTP request body
             // Send the standard { items: [...] } structure
             const orderData = {
                 items: itemsToProcess
-                // Add customer details or payment info here if needed for the function
+                // You can add customer details or shipping info here if needed by the function
             };
 
-            // >>> REPLACE WITH YOUR ACTUAL CLOUD FUNCTION HTTP TRIGGER URL <<<
+            // >>> REPLACE WITH YOUR ACTUAL processOrder CLOUD FUNCTION HTTP TRIGGER URL <<<
             // Get this URL from Firebase Console -> Functions -> Dashboard -> your_function_name
-            const cloudFunctionUrl = 'https://processorder-xdvgp3w2ua-uc.a.run.app'; // <-- !!! REPLACE THIS URL !!!
+            const cloudFunctionUrl = 'https://us-central1-eritrean-bookstore.cloudfunctions.net/processOrder'; // <-- !!! REPLACE THIS URL AFTER DEPLOYMENT !!!
 
 
             try {
                  // --- Call the HTTP Trigger Cloud Function using fetch ---
+                 // This call will initiate the order processing, stock check, order document creation,
+                 // and Stripe Payment Intent creation on the server.
                  const response = await fetch(cloudFunctionUrl, {
                      method: 'POST', // Use POST method
                      headers: {
                          'Content-Type': 'application/json' // Specify content type is JSON
                      },
-                     body: JSON.stringify(orderData) // Send data as a JSON string in the body
+                     body: JSON.stringify(orderData) // Send data as a JSON string in the request body
                  });
 
-                // Check if the HTTP response was successful (status 2xx)
+                // Check if the HTTP response status code indicates success (2xx)
                 if (!response.ok) {
-                     // If response is not ok (e.g., 400, 404, 500), it's an HTTP error
-                     // Try to parse the error response body if it's JSON
-                     const errorResponseData = await response.json().catch(() => null); // Parse JSON or set to null on failure
+                     // If response status is not ok (e.g., 400, 404, 409, 500), it's an HTTP error
+                     // Try to parse the error response body if it's JSON (the function sends JSON errors)
+                     const errorResponseData = await response.json().catch(() => null); // Attempt to parse JSON, catch parsing errors
                      console.error("HTTP error calling Cloud Function:", response.status, errorResponseData);
 
                      let errorMessage = `Checkout failed: Server returned status ${response.status}.`;
                      if (errorResponseData && errorResponseData.message) {
-                          // Use the error message from the function's JSON response if available
+                          // If the function sent a JSON error response with a 'message', use that
                          errorMessage = `Checkout failed: ${errorResponseData.message}`;
                      } else if (response.statusText) {
+                         // Otherwise, use the HTTP status text if available
                          errorMessage += ` ${response.statusText}`;
                      }
 
-
+                     // Display the error message to the user
                      orderStatusEl.textContent = errorMessage;
                      orderStatusEl.className = 'error';
-                      // Re-fetch books in case of partial stock update (unlikely with transactions)
+
+                     // Re-fetch books in case of errors after potential partial updates (unlikely with transactions but safe)
                      fetchBooks();
 
 
-                 } else {
-                     // HTTP response is OK (status 200)
-                     const responseData = await response.json(); // Parse the JSON response body
+                } else {
+                     // HTTP response status is OK (status 200)
+                     // Parse the JSON response body from the function
+                     const responseData = await response.json();
 
-                     // Check the 'status' field from the function's JSON response
-                     if (responseData && responseData.status === 'success') {
-                         // Order was processed successfully based on the function's response payload
-                         cart = []; // Clear client-side cart
-                         saveCart(); // Save empty cart to localStorage
-                         renderCart(); // Update UI to show empty cart
+                     // Check the 'status' field within the function's JSON response payload
+                     if (responseData && responseData.status === 'success' && responseData.clientSecret) {
+                         // The Cloud Function successfully created the Order document (pending payment)
+                         // and the Stripe Payment Intent, and returned the client secret.
 
-                         orderStatusEl.textContent = responseData.message || 'Order placed successfully!';
-                         orderStatusEl.className = 'success';
+                         orderStatusEl.textContent = 'Order created. Please complete payment below.'; // Updated message
+                         orderStatusEl.className = 'info';
 
-                         fetchBooks(); // Re-fetch book list to show updated stock
+                         // Store the client secret received from the function
+                         paymentIntentClientSecret = responseData.clientSecret;
+
+                         // >>> Initialize and display the Stripe Payment Element using the client secret <<<
+                         // This function call will render the secure payment form UI
+                         const elementsInstance = await initializePaymentElement(paymentIntentClientSecret);
+
+                         // If the payment element was successfully initialized, add the submit listener
+                         if (elementsInstance && paymentForm) {
+                             // Remove any previous submit listeners to avoid duplicates
+                             // A more robust way might involve tracking listeners or adding once on page load
+                             // For this structure, adding it here after successful element init is simpler.
+
+                             // Ensure the listener is added only once
+                             if (!paymentForm.dataset.listenerAdded) {
+                                 paymentForm.addEventListener('submit', async (e) => {
+                                      e.preventDefault(); // Prevent default browser form submission
+                                      // Call the function to confirm the payment with Stripe
+                                      await confirmPayment();
+                                 });
+                                 paymentForm.dataset.listenerAdded = 'true'; // Mark listener as added
+                                 console.log("Payment form submit event listener added.");
+                             }
+
+
+                         } else {
+                             console.error("Failed to initialize Stripe Payment Element.");
+                             orderStatusEl.textContent = 'Failed to set up payment form. Please try again.';
+                             orderStatusEl.className = 'error';
+                             // Re-enable checkout button if payment form setup failed
+                             checkoutBtn.disabled = false;
+                             checkoutBtn.textContent = 'Checkout';
+                         }
+
 
                      } else {
                          // Response was 200 OK, but the function's internal 'status' was not 'success'
-                         // This handles cases where the function might return { status: 'error', ... } with a 200 status
-                         console.error("Cloud Function returned success HTTP status but indicates error internally:", responseData);
-                         orderStatusEl.textContent = (responseData && responseData.message) ? responseData.message : 'Order processing completed with unexpected status. Check Firestore.';
-                         orderStatusEl.className = 'warning';
-                         // Fetch books as the transaction might have completed even with a weird response
-                         fetchBooks();
+                         // or the clientSecret was missing in the response payload.
+                         console.error("Cloud Function returned success HTTP status but indicates error internally or missing clientSecret:", responseData);
+                         orderStatusEl.textContent = (responseData && responseData.message) ? responseData.message : 'Failed to initiate payment process. Check logs.';
+                         orderStatusEl.className = 'error';
+                         fetchBooks(); // Re-fetch books in case of unexpected state
+                         // Re-enable checkout button
+                         checkoutBtn.disabled = false;
+                         checkoutBtn.textContent = 'Checkout';
                      }
-                 }
+                }
 
             } catch (error) {
-                // Handle network errors or issues during fetch/parsing
-                console.error("Error during fetch or parsing response:", error);
-                orderStatusEl.textContent = 'A network error occurred during checkout. Please try again.';
+                // Handle network errors or issues during the fetch call itself, or during JSON parsing
+                console.error("Error during fetch call or parsing response:", error);
+                orderStatusEl.textContent = 'A network error occurred during checkout initiation. Please try again.';
                 orderStatusEl.className = 'error';
-
-            } finally {
-                 checkoutBtn.disabled = false;
-                 checkoutBtn.textContent = 'Checkout';
+                 // Re-enable checkout button on fetch error
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = 'Checkout';
             }
+            // Note: The main checkoutBtn is re-enabled either in the error handlers above
+            // or after the payment confirmation process is complete in confirmPayment.
+            // The finally block from the original simple checkout is less relevant here as the flow continues to payment.
         }
-        // ... (rest of event listeners, initial load, window assignments) ...
 
 
         // --- Event Listeners ---
         cartToggleButton.addEventListener('click', toggleCart);
         cartCloseButton.addEventListener('click', toggleCart);
         cartOverlay.addEventListener('click', toggleCart);
-        // Use addEventListener for checkout button
+        // The main checkoutBtn click initiates the process of getting the client secret
         checkoutBtn.addEventListener('click', handleCheckout);
+
+        // Note: The payment form submission listener is added *after* the client secret is successfully received and the payment element is initialized in handleCheckout.
 
 
         // Add event listener for search input with debounce
@@ -795,55 +1012,72 @@
         });
 
         // --- Initial Load ---
+        // Update copyright year dynamically
         if (currentYearEl) {
-            currentYearEl.textContent = new Date().getFullYear(); // Update copyright year dynamically
+            currentYearEl.textContent = new Date().getFullYear();
         }
-        updateCartCount(); // Load cart from local storage on page load and update count
-        fetchBooks(); // Load books from Firestore on page load
-        // checkoutBtn disabled state is handled by saveCart() call above
+        // Load cart from local storage on page load and update count
+        updateCartCount();
+        // Load books from Firestore on page load
+        fetchBooks();
+        // checkoutBtn disabled state is handled by saveCart() call above based on initial cart state
 
 
         // --- Make necessary functions globally available for inline HTML handlers ---
         // Note: Using addEventListener is generally preferred over inline handlers (onclick="...").
-        // Keeping these for compatibility with your HTML structure.
+        // Keeping these for compatibility with your HTML structure if you use them.
         window.updateQty = updateQty;
         window.removeItem = removeItem;
         window.scrollToElement = scrollToElement; // Keep if hero button uses onclick
         window.handleCheckout = handleCheckout; // Ensure this is assigned if you use onclick="handleCheckout()"
 
+        // You might need initializePaymentElement or confirmPayment globally if called from HTML
+        // window.initializePaymentElement = initializePaymentElement;
+        // window.confirmPayment = confirmPayment; // Only if called directly via onclick
+
 
     } catch (initError) {
-        // Catch potential errors during Firebase SDK initialization or script loading
-        console.error("Firebase initialization failed:", initError);
-         const errorMessage = 'Failed to initialize Firebase SDK. Ensure SDK scripts are in <head> and config is correct. Check console.';
+        // Catch potential errors during Firebase SDK or Stripe SDK initialization or script loading
+        console.error("Store initialization failed:", initError);
+         const errorMessage = 'Failed to initialize the store. Ensure Firebase and Stripe SDK scripts are in <head> and configurations are correct. Check console for details.';
+         // Display error message on the page
          if(booksErrorEl) {
              booksErrorEl.textContent = errorMessage;
          }
+         // Clear loading indicators and disable interactive elements if initialization fails
          if(booksGrid) {
-              booksGrid.innerHTML = ''; // Clear any loading message
+              booksGrid.innerHTML = '';
          }
           if(checkoutBtn) {
-             checkoutBtn.disabled = true; // Disable checkout if Firebase didn't initialize
+             checkoutBtn.disabled = true;
+             checkoutBtn.textContent = 'Checkout Unavailable';
           }
            if(cartToggleButton) {
-             cartToggleButton.disabled = true; // Disable cart button if Firebase didn't initialize
+             cartToggleButton.disabled = true;
            }
            if(searchInput) {
-              searchInput.disabled = true; // Disable search if Firebase didn't initialize
+              searchInput.disabled = true;
            }
-           // Prevent errors if cart panel elements are accessed before init
-            if(cartItemsContainer) cartItemsContainer.innerHTML = '<p>Store not available.</p>';
+           // Update cart panel elements with error message
+            if(cartItemsContainer) cartItemsContainer.innerHTML = '<p>Store features unavailable.</p>';
             if(cartTotalEl) cartTotalEl.textContent = '0.00';
             if(cartCountEl) cartCountEl.textContent = '0';
              if(orderStatusEl) {
                  orderStatusEl.textContent = 'Store initialization failed.';
                  orderStatusEl.className = 'error';
              }
+             // Hide payment form if it exists
+             if (paymentForm) paymentForm.style.display = 'none';
+             if (paymentMessage) {
+                  paymentMessage.textContent = 'Payment unavailable.';
+                  paymentMessage.style.color = 'red';
+             }
 
 
-    } // End of Firebase try/catch
+    } // End of Firebase/Stripe initialization try/catch
 
 
   </script>
+
 </body>
 </html>
