@@ -1,68 +1,78 @@
- // --- Firebase Configuration ---
-    // WARNING: Exposing API keys client-side is common in Firebase web apps,
-    // but ensure your Firestore security rules are properly configured to protect your data.
+<script>
+    // --- CODE START ---
+    // Disclaimer: This code has been double-checked for JavaScript syntax errors.
+    // However, its correct functioning depends CRITICALLY on:
+    // 1. Your HTML having elements with the EXACT IDs used below.
+    // 2. Replacing placeholder values (Stripe Key, Cloud Function URL).
+    // 3. Correct inclusion of Firebase and Stripe SDKs in your HTML <head>.
+    // 4. Correct setup of your Firebase project (Rules, Function deployment) and Stripe account.
+    // ALWAYS check your browser's Developer Console (F12) for runtime errors!
+
+    // --- Firebase Configuration ---
+    // WARNING: Ensure your Firestore security rules are properly configured!
     const firebaseConfig = {
         apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0", // Replace if necessary, keep secure
         authDomain: "eritrean-bookstore.firebaseapp.com",
         projectId: "eritrean-bookstore",
-        // Corrected default storage bucket format (usually project-id.appspot.com)
-        storageBucket: "eritrean-bookstore.appspot.com", // Verify this is correct for your project
+        storageBucket: "eritrean-bookstore.appspot.com", // Verify this format is correct for your project
         messagingSenderId: "645911365846",
         appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
     };
 
-    // --- Initialize Firebase (v8 Compat SDKs are expected) ---
-    // Make sure you have included the necessary v8 compat scripts in the <head>:
+    // --- Initialize Firebase (v8 Compat SDKs Expected) ---
+    // Requires:
     // <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     // <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    // <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script> // Needed if using callable functions, optional for HTTP
-    // Also include Stripe.js: <script src="https://js.stripe.com/v3/"></script>
+    // <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script> // Optional for HTTP triggers
+    // <script src="https://js.stripe.com/v3/"></script> // Stripe SDK
 
     let app, db;
     try {
         if (typeof firebase === 'undefined' || typeof firebase.initializeApp !== 'function') {
-             throw new Error("Firebase SDK not loaded. Ensure compat scripts are included in <head>.");
+             throw new Error("Firebase SDK (v8 compat) not loaded. Check <head> scripts.");
         }
         app = firebase.initializeApp(firebaseConfig);
         db = firebase.firestore(); // Use v8 compat syntax
 
     } catch (error) {
-        console.error("Firebase Initialization Error:", error);
+        console.error("CRITICAL: Firebase Initialization Error:", error);
         // Display a critical error to the user if Firebase fails to load
-        const body = document.querySelector('body');
-        if (body) {
-            body.innerHTML = `<p style="color: red; padding: 20px;">Error initializing the application. Please check the console or contact support.</p>`;
-        }
+        document.body.innerHTML = `<p style="color: red; padding: 20px; font-family: sans-serif;"><b>Application Initialization Failed.</b><br>Could not initialize Firebase. Please ensure Firebase SDK scripts are loaded correctly in the HTML head and the configuration is valid. Check the browser console for details.</p>`;
     }
 
     // --- Constants ---
     const BOOKS_COLLECTION = 'books';
-    const ORDERS_COLLECTION = 'orders'; // Used server-side in Cloud Function
-    // const ORDER_STATUS_PENDING = 'pending'; // Defined but not used client-side in this version
+    const ORDERS_COLLECTION = 'orders'; // Primarily used server-side
     const DEBOUNCE_DELAY = 300; // ms for search debounce
 
     // --- Global State ---
     let allBooks = [];
-    // Initialize cart from local storage, ensure it's an array
     let cart = Array.isArray(JSON.parse(localStorage.getItem('cart'))) ? JSON.parse(localStorage.getItem('cart')) : [];
     let searchTimeout;
 
     // --- Stripe Initialization ---
-    // !!! IMPORTANT: Replace with your ACTUAL Stripe Publishable Key !!!
+    // !!! CRITICAL: Replace with your ACTUAL Stripe Publishable Key !!!
     const stripePublishableKey = 'pk_test_YOUR_PUBLISHABLE_KEY'; // e.g., pk_test_51... or pk_live_51...
+    let stripe = null;
     if (!stripePublishableKey || !stripePublishableKey.startsWith('pk_')) {
-        console.error("CRITICAL: Stripe Publishable Key is missing or invalid!");
-        // Optionally display an error to the user
+        console.error("CRITICAL: Stripe Publishable Key is missing or invalid! Payment will not work.");
+        // Display error to user?
+    } else {
+       try {
+            stripe = Stripe(stripePublishableKey);
+       } catch (e) {
+            console.error("CRITICAL: Failed to initialize Stripe. Check key and Stripe SDK loading.", e);
+            stripe = null; // Ensure stripe is null if init failed
+       }
     }
-    const stripe = Stripe(stripePublishableKey);
     let paymentIntentClientSecret = null; // Holds the secret from the Cloud Function
     let elements; // Holds the Stripe Elements instance
 
-    // --- DOM Element Caching ---
-    // Cache elements only after DOM is loaded
+    // --- DOM Element Caching (IDs must match your HTML exactly!) ---
     let booksGrid, searchInput, cartPanel, cartOverlay, cartItemsContainer, cartTotalEl, cartCountEl, checkoutBtn, orderStatusEl, cartToggleButton, cartCloseButton, booksErrorEl, currentYearEl, paymentForm, paymentElement, paymentMessage, paymentSubmitButton;
 
     function cacheDOMElements() {
+        // !!! CRITICAL: Ensure HTML elements with these IDs exist !!!
         booksGrid = document.getElementById('booksGrid');
         searchInput = document.getElementById('searchInput');
         cartPanel = document.getElementById('cartPanel');
@@ -84,9 +94,12 @@
 
         // Basic check for critical elements needed for core functionality
         if (!booksGrid || !searchInput || !cartPanel || !cartItemsContainer || !cartCountEl || !checkoutBtn || !cartToggleButton) {
-             console.error("Essential DOM elements are missing. Check your HTML structure.");
-             // Optional: Display an error message on the page
+             console.error("Essential DOM elements are missing! Check your HTML `id` attributes match the script expectations (e.g., 'booksGrid', 'cartPanel', etc.).");
+             // Optional: Display a user-facing error message
+             if(booksErrorEl) booksErrorEl.textContent = "Page structure error. Cannot load store.";
+             return false; // Indicate failure
         }
+        return true; // Indicate success
     }
 
     // --- Utility Functions ---
@@ -94,11 +107,16 @@
         const element = document.getElementById(id);
         if (element) {
             element.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            console.warn(`scrollToElement: Element with id '${id}' not found.`);
         }
     }
 
     function toggleCart() {
-        if (!cartPanel || !cartOverlay) return; // Check if elements exist
+        if (!cartPanel || !cartOverlay) {
+             console.error("Cannot toggle cart: cartPanel or cartOverlay element not found.");
+             return;
+        }
         const isOpen = cartPanel.classList.contains('open');
         cartPanel.classList.toggle('open');
         cartOverlay.classList.toggle('show');
@@ -122,6 +140,7 @@
         } catch (e) {
             console.error("Error saving cart to localStorage:", e);
             // Handle potential storage errors (e.g., quota exceeded)
+            if(orderStatusEl) orderStatusEl.textContent = "Error saving cart.";
         }
     }
 
@@ -150,7 +169,10 @@
 
     // Fetch & Render Books
     async function fetchBooks() {
-        if (!booksGrid || !booksErrorEl) return; // Check elements
+        if (!booksGrid || !booksErrorEl) {
+             console.error("Cannot fetch books: booksGrid or booksErrorEl element not found.");
+             return;
+        }
 
         booksErrorEl.textContent = '';
         booksGrid.innerHTML = '<p>Loading books...</p>'; // Loading indicator
@@ -162,10 +184,10 @@
             const snapshot = await db.collection(BOOKS_COLLECTION).get(); // v8 get()
 
             if (snapshot.empty) {
-                booksGrid.innerHTML = '<p>No books found in the collection.</p>';
+                console.log("Firestore 'books' collection is empty.");
                 allBooks = [];
-                renderBooks(allBooks); // Render empty state
-                return;
+                renderBooks(allBooks); // Render empty state explicitly
+                return; // Exit function after rendering empty state
             }
 
             // Map Firestore docs to book objects
@@ -173,15 +195,20 @@
             renderBooks(allBooks);
 
         } catch (error) {
-            console.error("Error fetching books:", error);
-            booksErrorEl.textContent = 'Failed to load books. Please check connection or Firestore configuration/rules.';
+            console.error("Error fetching books from Firestore:", error);
+            booksErrorEl.textContent = 'Failed to load books. Check Firestore connection, rules, or collection name.';
             booksGrid.innerHTML = ''; // Clear loading message on error
             allBooks = []; // Ensure allBooks is empty on error
+             renderBooks(allBooks); // Render empty state on error
         }
     }
 
     function renderBooks(bookList) {
-         if (!booksGrid || !searchInput || !booksErrorEl) return; // Check elements
+         if (!booksGrid || !searchInput || !booksErrorEl) {
+             console.error("Cannot render books: Critical elements missing (booksGrid, searchInput, booksErrorEl).");
+             if(booksGrid) booksGrid.innerHTML = '<p style="color:red;">Error displaying books.</p>';
+             return;
+         }
 
         booksGrid.innerHTML = ''; // Clear current grid content
 
@@ -195,49 +222,48 @@
 
         // Display appropriate message based on context
         if (bookList.length === 0) {
+             let message = '<p>No books to display.</p>'; // Default
              if (searchTerm !== '') {
-                 booksGrid.innerHTML = '<p>No books match your search.</p>';
+                 message = '<p>No books match your search.</p>';
              } else if (allBooks.length === 0 && booksErrorEl.textContent === '') {
                  // Initial fetch successful but no books in DB
-                  booksGrid.innerHTML = '<p>No books available at the moment.</p>';
+                  message = '<p>No books available at the moment.</p>';
              } else if (booksErrorEl.textContent !== '') {
                  // Error message is already displayed by fetchBooks
-                 booksGrid.innerHTML = ''; // Keep grid clear if fetch failed
+                 message = ''; // Keep grid clear if fetch failed
              }
-             else {
-                  // Should not happen if fetch succeeded and search is empty, but fallback
-                  booksGrid.innerHTML = '<p>No books to display.</p>';
-             }
+             booksGrid.innerHTML = message;
         } else {
             bookList.forEach(book => {
-                const card = document.createElement('div');
-                card.className = 'book-card';
-
                 // Validate data and provide defaults
+                const bookId = book.id; // Get ID for inputs/buttons
                 const title = escapeHTML(book.title || 'Untitled Book');
                 const stock = typeof book.stock === 'number' && book.stock >= 0 ? book.stock : 0;
                 const price = typeof book.price === 'number' && book.price >= 0 ? book.price : 0.00;
                 const imgURL = book.imgURL || 'placeholder.jpg'; // Use a placeholder image if URL is missing
                 const isOutOfStock = stock <= 0;
 
+                const card = document.createElement('div');
+                card.className = 'book-card';
                 card.innerHTML = `
                     <img src="${imgURL}" alt="${title}" loading="lazy">
                     <div class="book-info">
                         <div>
                             <h3>${title}</h3>
                             <p>$${price.toFixed(2)}</p>
+                             ${isOutOfStock ? '<p style="color: red; font-weight: bold;">Out of Stock</p>' : ''}
                         </div>
                         <div class="controls">
-                            <label for="qty-${book.id}" class="sr-only">Quantity for ${title}</label>
-                            <input type="number" min="1" max="${stock}" value="1" class="qty" id="qty-${book.id}" aria-label="Quantity for ${title}" ${isOutOfStock ? 'disabled' : ''}>
-                            <button class="add-btn" data-book-id="${book.id}" ${isOutOfStock ? 'disabled' : ''}>
-                                ${isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                            <label for="qty-${bookId}" class="sr-only">Quantity for ${title}</label>
+                            <input type="number" min="1" max="${stock}" value="1" class="qty" id="qty-${bookId}" aria-label="Quantity for ${title}" ${isOutOfStock ? 'disabled' : ''}>
+                            <button class="add-btn" data-book-id="${bookId}" ${isOutOfStock ? 'disabled' : ''}>
+                                Add to Cart
                             </button>
                         </div>
                     </div>`;
 
                 const addButton = card.querySelector('.add-btn');
-                const qtyInput = card.querySelector(`#qty-${book.id}`);
+                const qtyInput = card.querySelector(`#qty-${bookId}`);
 
                 if (addButton && qtyInput && !isOutOfStock) {
                     addButton.addEventListener('click', () => {
@@ -248,23 +274,35 @@
                             qtyInput.value = '1'; // Reset input
                             return;
                         }
-                        if (quantity > stock) {
-                            alert(`Cannot add ${quantity}. Only ${stock} "${book.title || 'item'}" available.`);
-                             qtyInput.value = stock > 0 ? stock : '1'; // Reset to max available or 1
+
+                        // Fetch the latest stock info just before adding (more robust UX check)
+                        const currentBookData = allBooks.find(b => b.id === bookId);
+                        const currentStockNow = currentBookData?.stock ?? 0;
+
+                        if (quantity > currentStockNow) {
+                            alert(`Cannot add ${quantity}. Only ${currentStockNow} "${title}" available.`);
+                             qtyInput.value = currentStockNow > 0 ? currentStockNow : '1'; // Reset to max available or 1
                             return;
                         }
 
-                        addToCart(book.id, quantity);
+                        addToCart(bookId, quantity);
 
                         // Provide visual feedback
                         addButton.textContent = 'Added!';
                         addButton.disabled = true;
                         setTimeout(() => {
-                            addButton.textContent = 'Add to Cart';
-                            addButton.disabled = false;
-                            qtyInput.value = '1'; // Reset quantity input after adding
+                            // Check if button still exists in case DOM changed rapidly
+                            const currentAddButton = booksGrid.querySelector(`[data-book-id="${bookId}"]`);
+                            if(currentAddButton) {
+                                currentAddButton.textContent = 'Add to Cart';
+                                currentAddButton.disabled = false;
+                            }
+                            if(qtyInput) qtyInput.value = '1'; // Reset quantity input after adding
                         }, 1000); // Show 'Added!' for 1 second
                     });
+                } else if (addButton && isOutOfStock) {
+                     // Explicitly set text if out of stock (already done in HTML, but reinforces)
+                     addButton.textContent = 'Out of Stock';
                 }
                 booksGrid.appendChild(card);
             });
@@ -273,7 +311,10 @@
 
     // Search functionality (triggered by event listener)
     function handleSearch() {
-        if (!searchInput) return;
+        if (!searchInput) {
+             console.error("Cannot search: searchInput element not found.");
+             return;
+        }
         const query = searchInput.value.toLowerCase().trim();
         // Filter the globally stored allBooks array
         const filteredBooks = allBooks.filter(book =>
@@ -287,9 +328,9 @@
         const book = allBooks.find(b => b.id === bookId);
 
         // Validate book data before adding
-        if (!book || typeof book.price !== 'number' || typeof book.stock !== 'number' || book.stock <= 0) {
-            console.error("Attempted to add invalid or out-of-stock book:", bookId, book);
-            alert("Error: Could not add item. Book data is missing or it's out of stock.");
+        if (!book || typeof book.price !== 'number' || typeof book.stock !== 'number') { // Allow stock 0 initially for comparison
+            console.error("Attempted to add book with invalid data:", bookId, book);
+            alert("Error: Could not add item due to invalid book data.");
             return;
         }
          if (typeof quantityToAdd !== 'number' || quantityToAdd < 1) {
@@ -297,6 +338,12 @@
               alert("Please enter a valid quantity.");
              return;
          }
+
+        const currentStock = book.stock;
+        if (currentStock <= 0) {
+            alert(`Sorry, "${book.title || 'item'}" is currently out of stock.`);
+            return;
+        }
 
         const existingCartItemIndex = cart.findIndex(item => item.id === bookId);
         let currentCartQty = 0;
@@ -308,12 +355,9 @@
         const potentialNewTotalQty = currentCartQty + quantityToAdd;
 
         // Client-side stock check (UX only, real check is server-side)
-        if (book.stock < potentialNewTotalQty) {
-            alert(`Sorry, only ${book.stock} "${book.title || 'item'}" available in total. You already have ${currentCartQty} in your cart.`);
-            // Optionally, adjust quantityToAdd to max available
-            // quantityToAdd = book.stock - currentCartQty;
-            // if (quantityToAdd <= 0) return; // Don't add if none can be added
-            return; // Or simply prevent adding more than available
+        if (currentStock < potentialNewTotalQty) {
+            alert(`Sorry, only ${currentStock} "${book.title || 'item'}" available in total. You already have ${currentCartQty} in your cart.`);
+            return;
         }
 
         if (existingCartItemIndex > -1) {
@@ -338,11 +382,14 @@
     }
 
     function renderCart() {
-         if (!cartItemsContainer || !cartTotalEl || !checkoutBtn || !orderStatusEl) return; // Check elements
+         if (!cartItemsContainer || !cartTotalEl || !checkoutBtn || !orderStatusEl) {
+             console.error("Cannot render cart: Critical elements missing.");
+             return;
+         }
 
         cartItemsContainer.innerHTML = ''; // Clear current cart content
         let currentTotal = 0;
-        orderStatusEl.textContent = ''; // Clear previous order status message
+        // Do not clear orderStatusEl here, it might show important checkout messages
 
         // Filter out invalid items just in case they slipped through
         cart = cart.filter(item => item && item.id && typeof item.quantity === 'number' && item.quantity > 0 && typeof item.price === 'number');
@@ -369,6 +416,7 @@
 
             const div = document.createElement('div');
             div.className = 'cart-item';
+            // Use data-* attributes for easier event delegation
             div.innerHTML = `
                 <img src="${item.imgURL || 'placeholder.jpg'}" alt="${title}" style="width: 40px; height: auto; vertical-align: middle; margin-right: 8px; border-radius: 4px;">
                 <div class="item-info">
@@ -377,9 +425,9 @@
                     ${item.quantity > currentStock ? `<br><small style="color:red; font-weight:bold;">Warning: Quantity exceeds available stock (${currentStock})!</small>` : ''}
                 </div>
                 <div class="item-controls">
-                    <button class="qty-btn decrease-qty" data-id="${item.id}" data-qty="${item.quantity - 1}" aria-label="Decrease quantity of ${title}">-</button>
+                    <button class="qty-btn decrease-qty" data-id="${item.id}" data-change="-1" aria-label="Decrease quantity of ${title}">-</button>
                     <span class="item-qty" aria-live="polite">${item.quantity}</span>
-                    <button class="qty-btn increase-qty" data-id="${item.id}" data-qty="${item.quantity + 1}" ${item.quantity >= currentStock ? 'disabled' : ''} aria-label="Increase quantity of ${title}">+</button>
+                    <button class="qty-btn increase-qty" data-id="${item.id}" data-change="1" ${item.quantity >= currentStock ? 'disabled' : ''} aria-label="Increase quantity of ${title}">+</button>
                     <button class="remove-btn" data-id="${item.id}" aria-label="Remove ${title} from cart">&times;</button>
                 </div>`;
             cartItemsContainer.appendChild(div);
@@ -388,41 +436,37 @@
         cartTotalEl.textContent = currentTotal.toFixed(2);
         checkoutBtn.disabled = false; // Re-enable if cart is not empty
 
-        // Add event listeners for cart item controls using delegation
-        addCartItemListeners();
+        // Add event listeners for cart item controls using delegation (done once in setup)
+        // Ensure listeners are active or re-add if necessary (simple approach assumes setupEventListeners handles it)
     }
 
-    // Use event delegation for cart item controls
-    function addCartItemListeners() {
-         if (!cartItemsContainer) return;
+    // Event handler for cart item clicks (called by delegated listener)
+    function handleCartItemClick(event) {
+        const target = event.target;
+        const bookId = target.dataset.id;
 
-         // Remove previous listeners to avoid duplication if renderCart is called multiple times
-         // This is a simple approach; more complex scenarios might need more robust listener management
-         cartItemsContainer.replaceWith(cartItemsContainer.cloneNode(true)); // Clone to remove listeners
-         cartItemsContainer = document.getElementById('cartItems'); // Re-select the new node
+        if (!bookId) return; // Clicked somewhere else in the container
 
-        cartItemsContainer.addEventListener('click', (event) => {
-            const target = event.target;
-            const bookId = target.dataset.id;
-
-            if (target.classList.contains('increase-qty') || target.classList.contains('decrease-qty')) {
-                 const newQty = parseInt(target.dataset.qty, 10);
-                 if (!isNaN(newQty)) {
-                    updateQty(bookId, newQty);
-                 }
-            } else if (target.classList.contains('remove-btn')) {
-                removeItem(bookId);
+        if (target.classList.contains('increase-qty') || target.classList.contains('decrease-qty')) {
+            const change = parseInt(target.dataset.change, 10);
+            const itemIndex = cart.findIndex(item => item.id === bookId);
+            if (itemIndex > -1 && !isNaN(change)) {
+                const currentQty = cart[itemIndex].quantity;
+                const newQty = currentQty + change;
+                updateQty(bookId, newQty); // updateQty handles validation (>=0, stock check)
             }
-        });
+        } else if (target.classList.contains('remove-btn')) {
+            removeItem(bookId);
+        }
     }
 
 
     function updateQty(id, newQty) {
-        // Basic validation (already done in parseInt check, but good practice)
-        if (isNaN(newQty) || newQty < 0) {
-            console.warn("Invalid new quantity provided:", newQty);
-            return;
-        }
+         // Validate newQty must be >= 0
+         if (isNaN(newQty) || newQty < 0) {
+             console.warn("Invalid new quantity provided:", newQty);
+             return; // Don't proceed
+         }
 
         if (newQty === 0) {
             return removeItem(id); // Remove item if quantity becomes 0
@@ -433,10 +477,9 @@
 
         // Check against current stock (UX check)
         if (newQty > stock) {
-            alert(`Sorry, only ${stock} items available for "${book?.title || 'this item'}".`);
+            alert(`Sorry, only ${stock} items available for "${book?.title || 'this item'}". Cannot increase quantity.`);
             // Do not update quantity beyond stock
-            // Re-render to potentially disable the '+' button again if needed
-            renderCart();
+            renderCart(); // Re-render to ensure '+' button state is correct
             return;
         }
 
@@ -461,17 +504,24 @@
     async function initializePaymentElement(clientSecret) {
         // Check required elements exist
         if (!paymentElement || !paymentForm || !paymentMessage || !paymentSubmitButton) {
-             console.error("Payment form elements missing in HTML.");
+             console.error("Payment form elements missing in HTML. Cannot initialize Stripe Element.");
               if (paymentMessage) {
                   paymentMessage.textContent = "Error: Payment form elements not found.";
                   paymentMessage.style.color = 'red';
               }
              return false; // Indicate failure
         }
+        if (!stripe) {
+            console.error("Stripe object not initialized. Cannot initialize Stripe Element.");
+            paymentMessage.textContent = "Error: Payment service failed to load.";
+            paymentMessage.style.color = 'red';
+            return false;
+        }
+
 
         if (!clientSecret) {
             console.error("Client secret is missing for payment element initialization.");
-            paymentMessage.textContent = "Unable to set up payment form (missing secret). Please try again.";
+            paymentMessage.textContent = "Unable to set up payment form (missing secret). Please try initiating checkout again.";
             paymentMessage.style.color = 'red';
             paymentForm.style.display = 'none'; // Hide form
             return false; // Indicate failure
@@ -499,7 +549,7 @@
 
         } catch (error) {
              console.error("Error initializing Stripe Elements:", error);
-             paymentMessage.textContent = "Error setting up payment form. Please try again.";
+             paymentMessage.textContent = "Error setting up payment form. Please refresh and try again.";
              paymentMessage.style.color = 'red';
              paymentForm.style.display = 'none'; // Hide form on error
               return false; // Indicate failure
@@ -511,9 +561,9 @@
     async function confirmPayment() {
         // Check required elements/state
         if (!elements || !paymentIntentClientSecret || !stripe || !paymentForm || !paymentMessage || !paymentSubmitButton || !orderStatusEl) {
-            console.error("Cannot confirm payment: Missing Stripe elements, client secret, or DOM elements.");
+            console.error("Cannot confirm payment: Missing Stripe elements, client secret, Stripe object, or DOM elements.");
              if (paymentMessage) {
-                 paymentMessage.textContent = "Payment confirmation error. Please try refreshing.";
+                 paymentMessage.textContent = "Payment confirmation error. Please refresh the page and try again.";
                  paymentMessage.style.color = 'red';
              }
               // Re-enable button if it exists
@@ -531,73 +581,84 @@
 
 
         try {
+             // Construct the return URL carefully. Using origin + pathname avoids issues with existing query params/hashes.
+             // Add a clear indicator for success/failure checking on return.
+            const returnUrlBase = window.location.origin + window.location.pathname;
+
             const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
                 elements,
-                clientSecret: paymentIntentClientSecret,
+                // clientSecret: paymentIntentClientSecret, // This seems redundant if elements created with it? Check Stripe Docs if issues arise.
                 confirmParams: {
-                    // return_url should point to a page on your site where Stripe can redirect the user
-                    // after actions like 3D Secure. For simplicity, using current page.
-                    // Production: Use a dedicated success/status page URL.
-                    return_url: window.location.href.split('?')[0] + '?payment_status=complete', // Example: Add param to check on reload
+                    // return_url is essential for payment methods that redirect.
+                    return_url: returnUrlBase + '?payment_status=returned', // Example: Add param to check on reload/return
                 },
                 redirect: 'if_required', // Redirect only if necessary (e.g., 3DS)
             });
 
-            // This point is typically reached only if:
-            // 1. There's an immediate validation error (stripeError is populated).
-            // 2. Payment succeeds without needing a redirect (paymentIntent is populated, stripeError is null).
-            // 3. If redirect *was* required, the user returns to the return_url, and you should
-            //    check the paymentIntent status on that page load (logic not included here).
+            // This point is typically reached ONLY if:
+            // 1. Immediate validation error (stripeError is populated).
+            // 2. Payment succeeds without needing a redirect (paymentIntent populated, stripeError null).
+            // NOTE: If redirect *was* required, the user returns to the return_url. You'd need
+            // separate logic on page load to check `payment_status=returned` in the URL,
+            // retrieve the PaymentIntent status using the client_secret from the URL, and update UI.
+            // This example focuses on the immediate success/error cases.
 
             if (stripeError) {
-                // Handle immediate errors (e.g., invalid card details)
-                console.error("Stripe payment confirmation failed (immediate error):", stripeError);
-                paymentMessage.textContent = stripeError.message || "Payment failed. Please check your details.";
+                 // Handle card validation errors or other immediate failures
+                console.error("Stripe payment confirmation failed (immediate error):", stripeError.type, stripeError.message);
+                 let userMessage = stripeError.message || "Payment failed. Please check your details.";
+                 if(stripeError.type === "card_error" || stripeError.type === "validation_error") {
+                     // Specific message for card/validation issues
+                      paymentMessage.textContent = userMessage;
+                 } else {
+                      // More generic error for other types
+                      paymentMessage.textContent = "An unexpected error occurred during payment. Please try again.";
+                 }
                 paymentMessage.style.color = 'red';
-                orderStatusEl.textContent = `Payment failed: ${stripeError.message || 'Please check details.'}`;
+                orderStatusEl.textContent = `Payment failed: ${userMessage}`;
                 orderStatusEl.className = 'error';
-
-                // IMPORTANT: Even on immediate client-side failure, the PaymentIntent *might* have been created.
-                // Your webhook handler should ideally check for failed statuses too.
-
-                // Re-enable the payment form submission button
-                paymentSubmitButton.disabled = false;
+                paymentSubmitButton.disabled = false; // Re-enable button
 
             } else if (paymentIntent) {
-                 // Payment succeeded client-side *without* requiring a redirect OR user returned after redirect.
+                 // Payment succeeded client-side *without* needing redirect OR user returned (needs separate check logic for return)
                  // **CRITICAL**: This is NOT final confirmation for fulfillment. Use Webhooks!
-                console.log("Stripe payment confirmation successful (client-side/returned):", paymentIntent.id, paymentIntent.status);
+                console.log("Stripe payment confirmation successful (client-side/no-redirect case):", paymentIntent.id, paymentIntent.status);
 
-                // Update UI to reflect success (pending webhook confirmation for fulfillment)
-                paymentMessage.textContent = 'Payment successful! Finalizing order...';
-                paymentMessage.style.color = 'green';
-                 orderStatusEl.textContent = 'Payment successful! Your order is being processed.';
-                 orderStatusEl.className = 'success';
+                 // Handle potential statuses ( 'succeeded', 'processing', 'requires_capture', etc.)
+                 // For this example, assume 'succeeded' or 'processing' means clear cart UI.
+                 // Robust handling depends on your payment flow (e.g., capture later?).
+                 if (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing') {
+                     paymentMessage.textContent = 'Payment successful! Finalizing order...';
+                     paymentMessage.style.color = 'green';
+                     orderStatusEl.textContent = 'Payment successful! Your order is being processed.';
+                     orderStatusEl.className = 'success';
 
-                 // Hide the payment form
-                 paymentForm.style.display = 'none';
+                     // Hide the payment form
+                     paymentForm.style.display = 'none';
 
-                 // Clear the cart (as payment was initiated successfully client-side)
-                 // In production, you might wait for webhook confirmation before clearing,
-                 // or show a "Processing" state until fulfillment.
-                 cart = [];
-                 saveCart();
-                 renderCart(); // Update cart UI (will show empty)
+                     // Clear the cart (as payment was initiated successfully client-side)
+                     // Based on client-side success, NOT webhook confirmation (simplification for demo)
+                     cart = [];
+                     saveCart();
+                     renderCart(); // Update cart UI (will show empty)
 
-                // Keep checkout button disabled until cart is empty or state resets
-                checkoutBtn.disabled = true;
-                checkoutBtn.textContent = 'Checkout';
+                    checkoutBtn.disabled = true; // Keep checkout disabled as cart is now empty
+                    checkoutBtn.textContent = 'Checkout';
 
-                // Do NOT call fetchBooks() here. Stock updates happen server-side via webhook.
+                    // Do NOT call fetchBooks() here. Stock updates happen server-side via webhook.
 
-                // Optional: Redirect to a dedicated success page after a short delay
-                // setTimeout(() => {
-                //    window.location.href = '/order-success.html?order_id=' + paymentIntent.metadata?.order_id; // Assuming order_id in metadata
-                // }, 2000);
+                 } else {
+                      // Handle other statuses if necessary (e.g., requires_action, requires_payment_method)
+                       console.warn("PaymentIntent status after confirmation:", paymentIntent.status);
+                       paymentMessage.textContent = `Payment status: ${paymentIntent.status}. Follow instructions if prompted.`;
+                       orderStatusEl.textContent = `Payment status: ${paymentIntent.status}`;
+                       orderStatusEl.className = 'info';
+                       paymentSubmitButton.disabled = false; // Allow retry if needed for some statuses
+                 }
 
             } else {
-                 // Fallback case - should not typically happen if redirect: 'if_required' is used
-                 console.warn("Stripe confirmPayment returned without error or paymentIntent.");
+                 // Fallback case - should not typically happen with redirect: 'if_required'
+                 console.warn("Stripe confirmPayment resolved without error or paymentIntent. Status uncertain.");
                  paymentMessage.textContent = 'Payment status uncertain. Please check your account or contact support.';
                  orderStatusEl.textContent = 'Payment status uncertain.';
                  orderStatusEl.className = 'warning';
@@ -605,11 +666,11 @@
             }
 
         } catch (error) {
-             // Catch any unexpected errors during the confirmation process
-             console.error("Error during Stripe payment confirmation:", error);
-             paymentMessage.textContent = 'An unexpected error occurred during payment. Please try again.';
+             // Catch any unexpected errors during the confirmation process itself
+             console.error("Error during Stripe payment confirmation call:", error);
+             paymentMessage.textContent = 'An unexpected error occurred during payment confirmation. Please try again.';
              paymentMessage.style.color = 'red';
-              orderStatusEl.textContent = 'An unexpected payment error occurred.';
+              orderStatusEl.textContent = 'An unexpected payment confirmation error occurred.';
               orderStatusEl.className = 'error';
                paymentSubmitButton.disabled = false; // Re-enable button
         }
@@ -618,7 +679,10 @@
 
     // --- Secure Checkout Flow (Calls Cloud Function) ---
     async function handleCheckout() {
-         if (!checkoutBtn || !orderStatusEl || !paymentForm || !paymentMessage) return; // Check elements
+         if (!checkoutBtn || !orderStatusEl || !paymentForm || !paymentMessage) {
+            console.error("Cannot handle checkout: Critical DOM elements missing.");
+            return;
+         }
 
         if (cart.length === 0) {
             alert("Your cart is empty.");
@@ -628,68 +692,76 @@
         // Disable button, show processing
         checkoutBtn.disabled = true;
         checkoutBtn.textContent = 'Processing...';
-        orderStatusEl.textContent = 'Preparing your order...';
+        orderStatusEl.textContent = 'Checking cart and stock...';
         orderStatusEl.className = 'info';
-        if (paymentForm) paymentForm.style.display = 'none'; // Hide payment form initially
+        if (paymentForm) paymentForm.style.display = 'none'; // Ensure payment form is hidden
         if (paymentMessage) paymentMessage.textContent = '';
 
-        // --- Client-Side Validation (Basic) ---
-        let hasInvalidItems = false;
-        const itemsToProcess = cart
-            .map(item => {
-                if (!item || !item.id || typeof item.quantity !== 'number' || item.quantity <= 0) {
-                    console.warn("Skipping invalid item in cart during checkout preparation:", item);
-                    hasInvalidItems = true;
-                    return null; // Mark as invalid
-                }
-                 // Find the book to check current stock for a preliminary check (UX)
-                 const bookData = allBooks.find(b => b.id === item.id);
-                 const currentStock = bookData?.stock ?? 0;
-                 if (item.quantity > currentStock) {
-                      alert(`Item "${item.title || item.id}" quantity (${item.quantity}) exceeds available stock (${currentStock}). Please update your cart.`);
-                      hasInvalidItems = true; // Treat as invalid for proceeding
-                      return null;
-                 }
+        // --- Client-Side Validation & Stock Check (UX Enhancement) ---
+        let hasIssues = false;
+        const itemsToProcess = [];
+        // Use a loop for clearer async checks if needed in future, though not needed here
+        for (const item of cart) {
+             if (!item || !item.id || typeof item.quantity !== 'number' || item.quantity <= 0) {
+                 console.warn("Skipping invalid item in cart during checkout:", item);
+                 hasIssues = true;
+                 continue; // Skip this item
+             }
+             // Find the book to check current stock for a preliminary check (UX)
+             const bookData = allBooks.find(b => b.id === item.id);
+             const currentStock = bookData?.stock ?? -1; // Use -1 to indicate data missing/error
 
-                // Send only ID and quantity to backend for security
-                return {
-                    bookId: item.id,
-                    quantity: item.quantity
-                };
-            })
-            .filter(item => item !== null); // Remove invalid items marked as null
+              if (currentStock === -1) {
+                 console.error(`Could not verify stock for item ${item.id}. Book data might be missing.`);
+                  alert(`Error checking stock for "${item.title || item.id}". Cannot proceed.`);
+                  hasIssues = true;
+                  break; // Stop processing if we can't verify stock
+              } else if (item.quantity > currentStock) {
+                  alert(`Item "${item.title || item.id}" quantity (${item.quantity}) exceeds available stock (${currentStock}). Please update your cart.`);
+                  hasIssues = true;
+                  break; // Stop processing if stock issue found
+              }
 
-        console.log("Valid items being sent to processOrder function:", itemsToProcess);
+             // Send only ID and quantity to backend for security
+             itemsToProcess.push({
+                 bookId: item.id,
+                 quantity: item.quantity
+             });
+        }
+
+
+        if (hasIssues) {
+             orderStatusEl.textContent = "Checkout failed: Please resolve issues in your cart (check quantities or stock).";
+             orderStatusEl.className = 'error';
+             renderCart(); // Re-render to show latest warnings/stock states
+             checkoutBtn.disabled = false; // Allow user to retry after fixing
+             checkoutBtn.textContent = 'Checkout';
+             return; // Stop checkout
+        }
 
         if (itemsToProcess.length === 0) {
-            let message = "Checkout cannot proceed.";
-            if (hasInvalidItems) {
-                message = "Please resolve issues in your cart (invalid items or insufficient stock).";
-                 renderCart(); // Re-render to show warnings/updates
-            } else {
-                 message = "Your cart contains no valid items to checkout."; // Should be caught earlier, but safety check
-            }
-            alert(message);
-            orderStatusEl.textContent = message;
-            orderStatusEl.className = 'error';
-            checkoutBtn.disabled = cart.length === 0; // Re-enable only if cart isn't technically empty
+             // This case should ideally be caught by the hasIssues check, but acts as a fallback
+             alert("Your cart contains no valid items to checkout.");
+             orderStatusEl.textContent = "Your cart contains no valid items to checkout.";
+             orderStatusEl.className = 'error';
+             checkoutBtn.disabled = cart.length === 0; // Should be true here
              checkoutBtn.textContent = 'Checkout';
-            return; // Stop checkout
+             return; // Stop checkout
         }
+
 
         // --- Prepare data for Cloud Function ---
         const orderData = {
             items: itemsToProcess
-            // Add other relevant data if needed by your function (e.g., currency)
-            // currency: 'usd' // Example: if your function expects currency
+            // Add other relevant data if needed by your function (e.g., currency: 'usd')
         };
 
-        // !!! IMPORTANT: Replace with your ACTUAL deployed Cloud Function HTTP URL !!!
-        const cloudFunctionUrl = 'https://us-central1-eritrean-bookstore.cloudfunctions.net/processOrder';
+        // !!! CRITICAL: Replace with your ACTUAL deployed Cloud Function HTTP URL !!!
+        const cloudFunctionUrl = 'https://us-central1-eritrean-bookstore.cloudfunctions.net/processOrder'; // EXAMPLE URL
 
-        if (cloudFunctionUrl.includes('https://YOUR_REGION-YOUR_PROJECT_ID.cloudfunctions.net/processOrder') || cloudFunctionUrl.includes('replace-this-url')) {
-             console.error("CRITICAL: Cloud Function URL is not set!");
-             orderStatusEl.textContent = 'Checkout configuration error. Cannot proceed.';
+        if (!cloudFunctionUrl || cloudFunctionUrl.includes('YOUR_PROJECT_ID') || cloudFunctionUrl.includes('processOrder') === false) { // Basic check
+             console.error("CRITICAL: Cloud Function URL is not correctly set!");
+             orderStatusEl.textContent = 'Checkout configuration error (Function URL). Cannot proceed.';
              orderStatusEl.className = 'error';
              checkoutBtn.disabled = false; // Re-enable
              checkoutBtn.textContent = 'Checkout';
@@ -699,37 +771,49 @@
 
         try {
             // --- Call the HTTP Cloud Function ---
-             orderStatusEl.textContent = 'Connecting to server...';
+             orderStatusEl.textContent = 'Connecting to server to create order...';
             const response = await fetch(cloudFunctionUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderData)
             });
 
-             orderStatusEl.textContent = 'Processing order details...'; // Update status
+             orderStatusEl.textContent = 'Validating order with server...'; // Update status
 
             // --- Handle Function Response ---
             if (!response.ok) {
                 // Attempt to parse error details from the function's response body
-                let errorDetails = `Server returned status ${response.status}.`;
+                let errorDetails = `Server error (${response.status}).`;
+                let specificMessage = '';
                 try {
                     const errorResponseData = await response.json();
                     console.error("Cloud Function Error Response:", errorResponseData);
                     // Use the specific error message from the function if available
-                    errorDetails = errorResponseData.message || errorDetails + (errorResponseData.error ? ` ${errorResponseData.error}` : '');
-                      // If specific stock error message received, update UI
-                     if (errorResponseData.code === 'out-of-stock' || errorResponseData.error?.includes('stock')) {
-                         alert(`Checkout failed: ${errorDetails} Please review your cart.`);
-                         fetchBooks(); // Re-fetch books to show updated stock
+                    specificMessage = errorResponseData.message || (typeof errorResponseData.error === 'string' ? errorResponseData.error : '');
+                     errorDetails = specificMessage || errorDetails + ` ${response.statusText || '(No details)'}`;
+
+                      // If specific stock error message received, update UI more clearly
+                     if (errorResponseData.error?.includes('stock') || errorResponseData.code === 'out-of-stock') {
+                         alert(`Checkout failed: ${errorDetails}. Your cart may need updating.`);
+                         fetchBooks(); // Re-fetch books to show potentially updated stock
                          renderCart(); // Re-render cart potentially showing warnings
+                     } else {
+                          // General server error
+                          alert(`Checkout failed: ${errorDetails}. Please try again later.`);
                      }
 
                 } catch (parseError) {
                      // Body wasn't JSON or empty, use status text
-                     errorDetails += ` ${response.statusText || '(No error details provided)'}`;
-                      console.error("HTTP error calling Cloud Function, failed to parse response:", response.status, response.statusText);
+                     errorDetails += ` ${response.statusText || '(Could not parse error response)'}`;
+                      console.error("HTTP error calling Cloud Function, failed to parse JSON response:", response.status, response.statusText);
+                      alert(`Checkout failed: ${errorDetails}. Please try again later.`);
                 }
-                throw new Error(`Checkout failed: ${errorDetails}`); // Throw to be caught below
+                // Throwing an error here was causing issues, directly update UI instead
+                orderStatusEl.textContent = `Checkout failed: ${errorDetails}`;
+                orderStatusEl.className = 'error';
+                checkoutBtn.disabled = false; // Allow retry
+                checkoutBtn.textContent = 'Checkout';
+                return; // Stop execution here after handling error
             }
 
             // --- Success: Initialize Payment Element ---
@@ -738,15 +822,15 @@
             // **Crucial Check**: Ensure clientSecret is present in the response
             if (!responseData || !responseData.clientSecret) {
                  console.error("Cloud Function Response missing clientSecret:", responseData);
-                 throw new Error("Checkout failed: Invalid response from server (missing payment details).");
+                 throw new Error("Checkout failed: Invalid response from server (missing payment details)."); // Throw to be caught by catch block
             }
 
             paymentIntentClientSecret = responseData.clientSecret; // Store the secret globally
             const orderId = responseData.orderId; // Assuming function returns orderId too
-            console.log(`Order ${orderId || 'N/A'} initiated. Client Secret received.`);
+            console.log(`Order ${orderId || 'N/A'} initiated by server. Client Secret received.`);
 
 
-             orderStatusEl.textContent = 'Order ready. Please enter payment details.';
+             orderStatusEl.textContent = 'Order ready. Please enter payment details below.';
               orderStatusEl.className = 'info';
 
             // Initialize the Stripe Payment Element with the received secret
@@ -754,6 +838,8 @@
              if (!initSuccess) {
                  // Error initializing payment element handled inside the function
                   // Re-enable checkout button as payment form failed to show
+                  orderStatusEl.textContent = "Failed to load payment form. Please try checkout again."; // Update status
+                  orderStatusEl.className = 'error';
                  checkoutBtn.disabled = false;
                  checkoutBtn.textContent = 'Checkout';
              }
@@ -761,63 +847,58 @@
 
 
         } catch (error) {
-             console.error("Error during handleCheckout:", error);
-             orderStatusEl.textContent = error.message || 'Checkout failed. Please try again.';
+             // Catch network errors during fetch or errors thrown explicitly (like missing clientSecret)
+             console.error("Error during handleCheckout function:", error);
+             orderStatusEl.textContent = `Checkout error: ${error.message || 'Please check connection and try again.'}`;
              orderStatusEl.className = 'error';
              // Re-enable the checkout button on failure
              checkoutBtn.disabled = false;
              checkoutBtn.textContent = 'Checkout';
-              // Consider re-fetching books in case of stock errors that might have been logged
-              if (error.message.includes('stock')) {
-                  fetchBooks();
-              }
         }
     }
 
 
     // --- Event Listeners Setup ---
     function setupEventListeners() {
+         // Check if essential elements for listeners exist first
+         if (!searchInput || !cartToggleButton || !cartCloseButton || !cartOverlay || !checkoutBtn || !paymentForm || !cartItemsContainer ) {
+              console.error("Cannot setup event listeners: One or more required DOM elements not found.");
+              // Display user-facing error?
+              if(booksErrorEl) booksErrorEl.textContent = "Error initializing page interactions.";
+              return;
+         }
+
         // Search Input (with Debounce)
-        if (searchInput) {
-            searchInput.addEventListener('input', () => {
-                debounce(handleSearch, DEBOUNCE_DELAY);
-            });
-        }
+        searchInput.addEventListener('input', () => {
+            debounce(handleSearch, DEBOUNCE_DELAY);
+        });
 
         // Cart Toggle Button
-        if (cartToggleButton) {
-            cartToggleButton.addEventListener('click', toggleCart);
-        }
+        cartToggleButton.addEventListener('click', toggleCart);
 
         // Cart Close Button
-        if (cartCloseButton) {
-            cartCloseButton.addEventListener('click', toggleCart);
-        }
+        cartCloseButton.addEventListener('click', toggleCart);
 
         // Cart Overlay Click to Close
-        if (cartOverlay) {
-            cartOverlay.addEventListener('click', (event) => {
-                // Close only if clicking the overlay itself, not its children (the panel)
-                if (event.target === cartOverlay) {
-                    toggleCart();
-                }
-            });
-        }
+        cartOverlay.addEventListener('click', (event) => {
+            // Close only if clicking the overlay itself, not its children (the panel)
+            if (event.target === cartOverlay) {
+                toggleCart();
+            }
+        });
 
         // Main Checkout Button (in Cart Panel)
-        if (checkoutBtn) {
-            checkoutBtn.addEventListener('click', handleCheckout);
-        }
+        checkoutBtn.addEventListener('click', handleCheckout);
 
         // Payment Form Submission
-        if (paymentForm) {
-            paymentForm.addEventListener('submit', async (event) => {
-                event.preventDefault(); // Prevent default form submission
-                await confirmPayment(); // Call the Stripe confirmation function
-            });
-        }
+        paymentForm.addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent default form submission
+            confirmPayment(); // Call the Stripe confirmation function (already async)
+        });
 
-         // Add listeners for book cards (delegation might be complex here, handled in renderBooks)
+         // Use Event Delegation for Cart Item Controls (+, -, remove)
+         cartItemsContainer.addEventListener('click', handleCartItemClick);
+
 
          // Listen for Esc key to close cart
          document.addEventListener('keydown', (event) => {
@@ -825,30 +906,44 @@
                    toggleCart();
               }
          });
+
+         console.log("Event listeners setup complete.");
     }
 
-    // --- Initialization ---
+    // --- Initialization on DOM Ready ---
     document.addEventListener('DOMContentLoaded', () => {
-        if (typeof firebase === 'undefined') {
-             console.error("Firebase not loaded, cannot initialize application.");
-             // Maybe display an error message permanently on the page
-             return;
+        console.log("DOM fully loaded and parsed.");
+
+        // Abort if critical dependencies failed earlier
+        if (typeof firebase === 'undefined' || !db) {
+             console.error("Aborting initialization: Firebase not available.");
+             return; // Stop further execution
         }
          if (!stripe) {
-              console.error("Stripe.js not loaded or initialized correctly.");
-              // Maybe display an error message
-              return;
+              console.error("Aborting initialization: Stripe not available.");
+              // Display a message about payment system failure
+              if(orderStatusEl) orderStatusEl.textContent = "Payment system failed to load.";
+              return; // Stop further execution
          }
 
 
-        cacheDOMElements(); // Cache elements once DOM is ready
+        if (!cacheDOMElements()) { // Cache elements and check if successful
+             console.error("Aborting initialization: Failed to cache essential DOM elements.");
+              return; // Stop further execution if critical elements are missing
+        }
+
 
         if (currentYearEl) {
             currentYearEl.textContent = new Date().getFullYear();
+        } else {
+            console.warn("Element with id 'currentYear' not found.");
         }
 
+        // Initial setup calls
         fetchBooks();      // Fetch books on page load
         updateCartCount(); // Set initial cart count display
         saveCart();        // Ensure checkout button state is correct based on initial cart
         setupEventListeners(); // Setup all event listeners
     });
+    // --- CODE END ---
+</script>
