@@ -1,14 +1,4 @@
-<script>
-    // --- CODE START ---
-    // Disclaimer: This code has been double-checked for JavaScript syntax errors.
-    // However, its correct functioning depends CRITICALLY on:
-    // 1. Your HTML having elements with the EXACT IDs used below.
-    // 2. Replacing placeholder values (Stripe Key, Cloud Function URL).
-    // 3. Correct inclusion of Firebase and Stripe SDKs in your HTML <head>.
-    // 4. Correct setup of your Firebase project (Rules, Function deployment) and Stripe account.
-    // ALWAYS check your browser's Developer Console (F12) for runtime errors!
-
-    // --- Firebase Configuration ---
+ // --- Firebase Configuration ---
     // WARNING: Ensure your Firestore security rules are properly configured!
     const firebaseConfig = {
         apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0", // Replace if necessary, keep secure
@@ -946,4 +936,4 @@
         setupEventListeners(); // Setup all event listeners
     });
     // --- CODE END ---
-</script>
+
