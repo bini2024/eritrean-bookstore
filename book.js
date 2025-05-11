@@ -1,4 +1,4 @@
- // --- Firebase Configuration ---
+    // --- Firebase Configuration ---
     // WARNING: Exposing API keys client-side is common in Firebase web apps,
     // but ensure your Firestore security rules are properly configured to protect your data.
     const firebaseConfig = {
