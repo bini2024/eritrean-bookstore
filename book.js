@@ -49,7 +49,7 @@
 
     // --- Stripe Initialization ---
     // !!! IMPORTANT: Replace with your ACTUAL Stripe Publishable Key !!!
-    const stripePublishableKey = 'pk_test_YOUR_PUBLISHABLE_KEY'; // e.g., pk_test_51... or pk_live_51...
+    const stripePublishableKey = 'pk_test_51QicnFFG9IKXiGXaYflDuhisySfvBGpcx5ZLbK3hFlPyYyZN4FMe94jZz6pDGRm4H3IwlrygEdSoUipBfM7TPGyS00HaKcfLaU'; // e.g., pk_test_51... or pk_live_51...
     if (!stripePublishableKey || !stripePublishableKey.startsWith('pk_')) {
         console.error("CRITICAL: Stripe Publishable Key is missing or invalid!");
         // Optionally display an error to the user
