@@ -808,8 +808,15 @@ async function initializePaymentElement() {
     try {
         // Call your Cloud Function to create a PaymentIntent
         // The function should receive the cart items and return the client secret
-        const createPaymentIntent = functions.httpsCallable('createPaymentIntent');
-        const result = await createPaymentIntent({ cart: cart }); // Pass cart data
+        // CORRECT
+const createPaymentIntent = functions.httpsCallable('processOrder');
+const result = await createPaymentIntent({
+  items: cart.map(item => ({
+    bookId: item.id,        // ID of the book (from Firestore)
+    quantity: item.quantity // How many
+  }))
+});
+ // Pass cart data
 
         if (result.data.clientSecret) {
             paymentIntentClientSecret = result.data.clientSecret;
