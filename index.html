@@ -1,1061 +1,638 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Eritrean Bookstore</title>
-  <meta name="description" content="Discover and purchase the best Eritrean literature online.">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Erishipping Surprise</title>
+  <meta name="description" content="Discover and purchase curated surprise packages and books.">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
-    <script src="https://js.stripe.com/v3/"></script>
-  
-  <style>
-    :root {
-      --primary: #0044cc; /* A deep blue */
-      --secondary: #0066ff; /* A brighter blue */
-      --accent: #ffdd00; /* A bright yellow/gold */
-      --bg: #f9f9f9; /* Light grey background */
-      --text: #333; /* Dark grey text */
-      --card-bg: #fff; /* White card background */
-      --panel-width: 320px;
-      --error-color: #d9534f; /* Bootstrap red */
-      --success-color: #5cb85c; /* Bootstrap green */
-      --info-color: #5bc0de; /* Bootstrap blue/cyan */
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { font-family: 'Roboto', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; line-height: 1.6;}
-    img { max-width: 100%; height: auto; display: block;} /* Basic image reset */
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <style>
+    :root {
+      --primary: #0044cc; /* A deep blue */
+      --secondary: #0066ff; /* A brighter blue */
+      --accent: #ffdd00; /* A bright yellow/gold */
+      --bg: #f9f9f9; /* Light grey background */
+      --text: #333; /* Dark grey text */
+      --card-bg: #fff; /* White card background */
+      --panel-width: 320px;
+      --error-color: #d9534f;
+      --success-color: #5cb85c;
+      --info-color: #5bc0de;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Roboto', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; line-height: 1.6;}
+    img { max-width: 100%; height: auto; display: block;}
 
-    /* Accessibility: Screen Reader Only Class */
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    header { background: var(--primary); color: #fff; padding: 1rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    header h1 { font-size: 1.5rem; margin: 0; }
+    header nav ul { list-style: none; display: flex; gap: 1.5rem; align-items: center; }
+    header nav ul li a, header nav ul li button { color: #fff; text-decoration: none; font-weight: bold; cursor: pointer; background: none; border: none; font-size: 1rem; font-family: inherit; transition: opacity 0.2s ease-in-out; }
+    header nav ul li a:hover, header nav ul li button:hover { opacity: 0.8; }
+    header nav ul li button { display: flex; align-items: center; gap: 5px; }
 
-    header {
-      background: var(--primary);
-      color: #fff;
-      padding: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Add shadow for depth */
-    }
-    header h1 { font-size: 1.5rem; margin: 0; /* Remove default margin */ }
-    header nav ul { list-style: none; display: flex; gap: 1.5rem; align-items: center; /* Increased gap */ }
-    header nav ul li a, header nav ul li button {
-      color: #fff;
-      text-decoration: none;
-      font-weight: bold;
-      cursor: pointer;
-      background: none;
-      border: none;
-      font-size: 1rem;
-      font-family: inherit;
-      transition: opacity 0.2s ease-in-out; /* Smooth hover */
-    }
-    header nav ul li a:hover, header nav ul li button:hover { opacity: 0.8; }
-    header nav ul li button { display: flex; align-items: center; gap: 5px; } /* Align button content */
+    .cart-button-wrapper { position: relative; display: inline-block; }
+    .cart-count { position: absolute; top: -8px; right: -12px; background: var(--accent); color: var(--primary); border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; font-weight: bold; min-width: 20px; text-align: center; line-height: 1.2; }
+    
+    .hero { background: url('https://via.placeholder.com/1200x600?text=Erishipping+Surprise') no-repeat center/cover; background-color: #555; height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; position: relative; padding: 1rem; }
+    .hero::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); z-index: 0; }
+    .hero > * { z-index: 1; }
+    /* CHANGED: Updated hero text */
+    .hero h2 { font-size: 2.5rem; margin-bottom: 1.5rem; }
+    .hero .cta .btn { background: var(--accent); color: var(--primary); border: none; padding: 0.75rem 1.5rem; border-radius: 5px; cursor: pointer; transition: background 0.3s ease-in-out; font-size: 1.1rem; font-weight: bold;}
+    .hero .cta .btn:hover { background: #ffe066; }
 
+    .books-section { padding: 2rem 1rem; max-width: 1200px; margin: auto; }
+    #booksError { color: var(--error-color); text-align: center; margin-bottom: 1rem; font-weight: bold; }
+    .books-header { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .books-header h2 { font-size: 2rem; color: var(--primary); }
+    .books-header input { width: 100%; max-width: 400px; padding: 0.75rem 1rem; border: 1px solid #ccc; border-radius: 25px; font-size: 1rem; }
 
-    .cart-button-wrapper {
-      position: relative;
-      display: inline-block;
-    }
-    .cart-count {
-      position: absolute;
-      top: -8px;
-      right: -12px;
-      background: var(--accent);
-      color: var(--primary);
-      border-radius: 50%;
-      padding: 2px 6px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      min-width: 20px; /* Ensure circular shape */
-      text-align: center;
-      line-height: 1.2; /* Center text vertically */
-    }
-    .hero {
-      /* Update this URL to your hero image */
-      background: url('https://via.placeholder.com/1200x600?text=Eritrean+Bookstore+Hero') no-repeat center/cover;
-      background-color: #555; /* Fallback color */
-      height: 60vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      color: white;
-      position: relative;
-      padding: 1rem; /* Add padding for small screens */
-    }
-    .hero::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); z-index: 0; /* Ensure overlay is behind text */ }
-    .hero > * { z-index: 1; /* Bring text and button above overlay */ }
-    .hero h2 { font-size: 2.5rem; margin-bottom: 1.5rem; /* Increased margin */ }
-    .hero .cta .btn { background: var(--accent); color: var(--primary); border: none; padding: 0.75rem 1.5rem; border-radius: 5px; cursor: pointer; transition: background 0.3s ease-in-out; font-size: 1.1rem; /* Slightly larger font */ font-weight: bold;}
-    .hero .cta .btn:hover { background: #ffe066; }
+    .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1.5rem; }
+    .books-grid p { text-align: center; grid-column: 1 / -1; }
+    .book-card { background: var(--card-bg); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden; transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; cursor: pointer; }
+    .book-card:hover { transform: translateY(-5px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .book-card img { width: 100%; height: 250px; object-fit: cover; object-position: center; background-color: #eee; }
+    .book-info { padding: 1rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .book-info h3 { font-size: 1.1rem; color: var(--primary); margin-bottom: 0.5rem; line-height: 1.3;}
+    .book-info p { margin-bottom: 0.5rem; font-size: 0.9rem;}
+    .book-info .controls { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.8rem; }
+    .book-info .qty { width: 60px; padding: 0.4rem; text-align: center; border: 1px solid #ccc; border-radius: 5px; font-size: 0.9rem; }
+    .book-info .add-btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer; flex-shrink: 0; transition: background 0.3s ease-in-out; font-size: 0.9rem;}
+    .book-info .add-btn:hover:not(:disabled) { background: var(--secondary); }
+    .book-info .add-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
 
-    .books-section { padding: 2rem 1rem; max-width: 1200px; margin: auto; }
-    #booksError { color: var(--error-color); text-align: center; margin-bottom: 1rem; font-weight: bold; }
-    .books-header { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-    .books-header h2 { font-size: 2rem; color: var(--primary); }
-    .books-header input { width: 100%; max-width: 400px; padding: 0.75rem 1rem; /* Increased padding */ border: 1px solid #ccc; border-radius: 25px; /* Rounded corners */ font-size: 1rem; }
+    /* Cart panel */
+    .cart-panel { position: fixed; top: 0; right: calc(-1 * var(--panel-width) - 10px); width: var(--panel-width); max-width: 95vw; height: 100%; background: var(--card-bg); box-shadow: -4px 0 12px rgba(0,0,0,0.3); transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2000; display: flex; flex-direction: column; }
+    .cart-panel.open { right: 0; }
+    .cart-header { padding: 1rem; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .cart-header h2 { margin: 0; font-size: 1.3rem; }
+    .cart-close { background: transparent; border: none; color: white; font-size: 1.75rem; cursor: pointer; line-height: 1; padding: 0 0.5rem; transition: opacity 0.2s ease-in-out;}
+    .cart-close:hover { opacity: 0.7;}
+    .cart-content { flex-grow: 1; overflow-y: auto; padding: 1rem; -webkit-overflow-scrolling: touch; }
+    .cart-content p { text-align: center; color: #666;}
+    .cart-item { display: flex; align-items: center; margin-bottom: 1rem; gap: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.75rem; flex-wrap: wrap; }
+    .cart-item img { flex-shrink: 0; width: 50px; height: 60px; object-fit: cover; border-radius: 4px;}
+    .cart-item .item-info { flex-grow: 1; font-size: 0.95rem; margin-right: 0.5rem; }
+    .cart-item .item-info strong { display: block; margin-bottom: 0.25rem; font-size: 1rem; color: var(--primary);}
+    .cart-item .item-controls { display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0; margin-top: 0.5rem; }
+    .cart-item .item-controls button { background: #eee; border: 1px solid #ccc; padding: 0.3rem 0.6rem; border-radius: 5px; cursor: pointer; font-size: 0.9rem; min-width: 30px; text-align: center; transition: background 0.2s;}
+    .cart-item .item-controls button:hover:not(:disabled) { background: #ddd; }
+    .cart-item .item-controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .cart-item .item-controls .remove-btn { background: #fdd; color: var(--error-color); border-color: var(--error-color); font-weight: bold;}
+    .cart-item .item-controls .remove-btn:hover { background: #fcc; }
+    .cart-item .item-qty { padding: 0 0.5rem; font-weight: bold; min-width: 25px; text-align: center; font-size: 1rem;}
 
-    .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1.5rem; }
-    .books-grid p { text-align: center; grid-column: 1 / -1; /* Center loading/empty message */ }
-    .book-card {
-      background: var(--card-bg);
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15); /* Slightly stronger shadow */
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-      cursor: pointer; /* Indicate interactive */
-    }
-    .book-card:hover { transform: translateY(-5px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    .book-card img { width: 100%; height: 250px; object-fit: cover; object-position: center; background-color: #eee; }
-    .book-info { padding: 1rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
-    .book-info h3 { font-size: 1.1rem; color: var(--primary); margin-bottom: 0.5rem; line-height: 1.3;}
-    .book-info p { margin-bottom: 0.5rem; font-size: 0.9rem;}
-    .book-info .controls { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.8rem; /* Increased margin */ }
-    .book-info .qty { width: 60px; padding: 0.4rem; text-align: center; border: 1px solid #ccc; border-radius: 5px; font-size: 0.9rem; }
-    .book-info .add-btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer; flex-shrink: 0; transition: background 0.3s ease-in-out; font-size: 0.9rem;}
-    .book-info .add-btn:hover:not(:disabled) { background: var(--secondary); }
-    .book-info .add-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
+    .cart-footer { padding: 1rem; border-top: 1px solid #ddd; flex-shrink: 0; background: #fff; }
+    .cart-footer p { margin-bottom: 1rem; font-weight: bold; font-size: 1.1rem; }
+    /* CHANGED: Styles for the new checkout button link */
+    .cart-footer .checkout-btn-link { 
+        display: block; /* Make the link fill the width */
+        width: 100%; 
+        padding: 0.75rem; 
+        font-size: 1.1rem; 
+        background: var(--primary); 
+        color: white; 
+        border: none; 
+        border-radius: 5px; 
+        cursor: pointer; 
+        transition: background 0.3s ease-in-out; 
+        font-weight: bold;
+        text-align: center;
+        text-decoration: none;
+    }
+    .cart-footer .checkout-btn-link:hover { background: var(--secondary); }
+    .cart-footer .checkout-btn-link.disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; pointer-events: none; }
+    #checkout-info { margin-top: 1rem; font-size: 0.9rem; color: #555; text-align: center; }
 
+    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); opacity: 0; visibility: hidden; transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out; z-index: 1500; }
+    .overlay.show { opacity: 1; visibility: visible; }
+    a:focus, button:focus, input:focus { outline: none; box-shadow: 0 0 0 3px var(--secondary); border-color: var(--secondary); }
 
-    /* Cart panel */
-    .cart-panel {
-      position: fixed;
-      top: 0;
-      right: calc(-1 * var(--panel-width) - 10px); /* Hide fully */
-      width: var(--panel-width);
-      max-width: 95vw; /* Prevent excessive width on small screens */
-      height: 100%;
-      background: var(--card-bg);
-      box-shadow: -4px 0 12px rgba(0,0,0,0.3); /* Stronger shadow */
-      transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* Material Design easing */
-      z-index: 2000;
-      display: flex;
-      flex-direction: column;
-    }
-    .cart-panel.open { right: 0; }
-    .cart-header { padding: 1rem; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-    .cart-header h2 { margin: 0; font-size: 1.3rem; }
-    .cart-close { background: transparent; border: none; color: white; font-size: 1.75rem; cursor: pointer; line-height: 1; padding: 0 0.5rem; transition: opacity 0.2s ease-in-out;}
-    .cart-close:hover { opacity: 0.7;}
-    .cart-content { flex-grow: 1; overflow-y: auto; padding: 1rem; -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */ }
-    .cart-content p { text-align: center; color: #666;}
-    .cart-item { display: flex; align-items: center; margin-bottom: 1rem; gap: 0.8rem; /* Increased gap */ border-bottom: 1px solid #eee; padding-bottom: 0.75rem; flex-wrap: wrap; /* Allow wrapping on small screens */ }
-    .cart-item img { flex-shrink: 0; width: 50px; height: 60px; object-fit: cover; border-radius: 4px;} /* Slightly larger image */
-    .cart-item .item-info { flex-grow: 1; font-size: 0.95rem; margin-right: 0.5rem; /* Add margin to the right */ }
-    .cart-item .item-info strong { display: block; margin-bottom: 0.25rem; font-size: 1rem; color: var(--primary);}
-    .cart-item .item-controls { display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0; /* Prevent shrinking */ margin-top: 0.5rem; /* Add margin if wrapped */ }
-    .cart-item .item-controls button { background: #eee; border: 1px solid #ccc; padding: 0.3rem 0.6rem; border-radius: 5px; cursor: pointer; font-size: 0.9rem; min-width: 30px; text-align: center; transition: background 0.2s;}
-    .cart-item .item-controls button:hover:not(:disabled) { background: #ddd; }
-    .cart-item .item-controls button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .cart-item .item-controls .remove-btn { background: #fdd; color: var(--error-color); border-color: var(--error-color); font-weight: bold;}
-    .cart-item .item-controls .remove-btn:hover { background: #fcc; }
-    .cart-item .item-qty { padding: 0 0.5rem; font-weight: bold; min-width: 25px; text-align: center; font-size: 1rem;}
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.2rem; }
+      header nav ul { gap: 1rem; }
+      .hero h2 { font-size: 2rem; }
+      .books-grid { grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); }
+      .book-card img { height: 200px; }
+      .cart-panel { width: 95vw; --panel-width: 95vw; }
+      .cart-item { flex-direction: column; align-items: flex-start; }
+      .cart-item img { margin-bottom: 0.5rem;}
+      .cart-item .item-info { margin-right: 0; margin-bottom: 0.5rem; }
+      .cart-item .item-controls { width: 100%; justify-content: space-between; }
+    }
 
-    .cart-footer { padding: 1rem; border-top: 1px solid #ddd; flex-shrink: 0; background: #fff; }
-    .cart-footer p { margin-bottom: 1rem; font-weight: bold; font-size: 1.1rem; }
-    .cart-footer .checkout-btn { width: 100%; padding: 0.75rem; font-size: 1.1rem; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s ease-in-out; font-weight: bold;}
-    .cart-footer .checkout-btn:hover:not(:disabled) { background: var(--secondary); }
-    .cart-footer .checkout-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
-    #orderStatus { margin-top: 1rem; font-weight: bold; text-align: center;}
-    #orderStatus.success { color: var(--success-color); }
-    #orderStatus.error { color: var(--error-color); }
-    #orderStatus.info { color: var(--info-color); }
-
-
-    /* Overlay */
-    .overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.6); /* Slightly darker overlay */
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
-      z-index: 1500;
-    }
-    .overlay.show { opacity: 1; visibility: visible; }
-
-    /* Focus Styles for Accessibility */
-    /* Removed default outline if custom is applied */
-    a:focus, button:focus, input:focus {
-      outline: none; /* Remove default outline */
-      box-shadow: 0 0 0 3px var(--secondary); /* Use box-shadow as focus indicator */
-      border-color: var(--secondary); /* Highlight border */
-    }
-
-
-    @media (max-width: 600px) {
-      header h1 { font-size: 1.2rem; }
-      header nav ul { gap: 1rem; }
-      .hero h2 { font-size: 2rem; }
-      .books-grid { grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); }
-      .book-card img { height: 200px; }
-      .cart-panel { width: 95vw; --panel-width: 95vw; } /* Cart takes more width on small screens */
-      .cart-item { flex-direction: column; align-items: flex-start; } /* Stack cart item info and controls */
-      .cart-item img { margin-bottom: 0.5rem;}
-      .cart-item .item-info { margin-right: 0; margin-bottom: 0.5rem; }
-      .cart-item .item-controls { width: 100%; justify-content: space-between; }
-    }
-
-  .footer {
-    background-color: #111;
-    color: #ddd;
-    padding: 25px 15px; /* Increased padding */
-    font-family: Arial, sans-serif;
-    margin-top: 3rem; /* Ensure space above footer */
-  }
-  .footer-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 30px; /* Increased gap */
-    max-width: 1000px;
-    margin: auto;
-  }
-  .footer-col { flex: 1 1 220px; /* Allow cols to grow slightly */ }
-  .footer-col h4 { color: #fff; margin-bottom: 12px; font-size: 17px; border-bottom: 1px solid #444; padding-bottom: 5px;} /* Added separator */
-  .footer-col p, .footer-col ul, .footer-col a { color: #bbb; font-size: 14px; text-decoration: none; line-height: 1.6; /* Increased line height */ }
-  .footer-col ul { list-style: none; padding: 0; }
-  .footer-col ul li { margin-bottom: 8px; /* Increased margin */ }
-  .footer-col a:hover { color: #fff; text-decoration: underline; /* Add underline on hover */ }
-  .social-icons a { font-size: 18px; /* Slightly larger icons */ margin-right: 10px; color: #bbb; transition: color 0.2s;}
-  .social-icons a:hover { color: #fff; }
-  .footer-bottom { text-align: center; margin-top: 25px; border-top: 1px solid #333; padding-top: 15px; font-size: 13px; color: #999; }
-  .footer-bottom strong { color: #fff; } /* Highlight bookstore name */
-
-  </style>
+  .footer { background-color: #111; color: #ddd; padding: 25px 15px; font-family: Arial, sans-serif; margin-top: 3rem; }
+  .footer-container { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 30px; max-width: 1000px; margin: auto; }
+  .footer-col { flex: 1 1 220px; }
+  .footer-col h4 { color: #fff; margin-bottom: 12px; font-size: 17px; border-bottom: 1px solid #444; padding-bottom: 5px;}
+  .footer-col p, .footer-col ul, .footer-col a { color: #bbb; font-size: 14px; text-decoration: none; line-height: 1.6; }
+  .footer-col ul { list-style: none; padding: 0; }
+  .footer-col ul li { margin-bottom: 8px; }
+  .footer-col a:hover { color: #fff; text-decoration: underline; }
+  .social-icons a { font-size: 18px; margin-right: 10px; color: #bbb; transition: color 0.2s;}
+  .social-icons a:hover { color: #fff; }
+  .footer-bottom { text-align: center; margin-top: 25px; border-top: 1px solid #333; padding-top: 15px; font-size: 13px; color: #999; }
+  .footer-bottom strong { color: #fff; }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Eritrean Bookstore</h1>
-    <nav>
-      <ul>
-        <li><a href="#books">Books</a></li>
-        <li class="cart-button-wrapper">
-          <button type="button" id="cartToggleButton" aria-label="Toggle shopping cart">
-            <i class="fas fa-shopping-cart"></i> Cart
-            <span class="cart-count" id="cart-count" aria-live="polite">0</span>
-          </button>
-        </li>
-      </ul>
-    </nav>
-  </header>
+  <header>
+    <h1>Erishipping Surprise</h1>
+    <nav>
+      <ul>
+        <li><a href="#books">Products</a></li>
+        <li class="cart-button-wrapper">
+          <button type="button" id="cartToggleButton" aria-label="Toggle shopping cart">
+            <i class="fas fa-shopping-cart"></i> Cart
+            <span class="cart-count" id="cart-count" aria-live="polite">0</span>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </header>
 
-  <main>     <div class="hero">
-      <h2>Discover the Best Eritrean Books</h2>
-      <div class="cta"><button class="btn" onclick="scrollToElement('books')">Shop Now</button></div>
-    </div>
+  <main>
+    <div class="hero">
+        <h2>Your Next Favorite Surprise, Delivered</h2>
+      <div class="cta"><button class="btn" onclick="scrollToElement('books')">Shop Now</button></div>
+    </div>
 
-    <section id="books" class="books-section">
-      <div class="books-header">
-        <h2>Our Collection</h2>
-        <input type="search" id="searchInput" placeholder="Search books by title...">
-      </div>
-      <div id="booksError"></div>
-      <div class="books-grid" id="booksGrid">
-                    <p>Loading books...</p>
-      </div>
-    </section>
-  </main>
+    <section id="books" class="books-section">
+      <div class="books-header">
+        <h2>Our Collection</h2>
+        <input type="search" id="searchInput" placeholder="Search products by title...">
+      </div>
+      <div id="booksError"></div>
+      <div class="books-grid" id="booksGrid">
+              <p>Loading products...</p>
+      </div>
+    </section>
+  </main>
 
-  <div class="overlay" id="cartOverlay"></div>
-  <aside class="cart-panel" id="cartPanel" aria-labelledby="cartHeading">
-    <div class="cart-header">
-      <h2 id="cartHeading">Your Cart</h2>
-      <button class="cart-close" id="cartCloseButton" aria-label="Close cart">&times;</button>
-    </div>
-    <div class="cart-content" id="cartItems">
-            <p>Your cart is empty.</p>
-    </div>
-    <div class="cart-footer">
-      <p>Total: $<span id="cartTotal">0.00</span></p>
-      
-      <button class="checkout-btn" id="checkoutBtn" disabled>Checkout</button>       
-      <p id="orderStatus"></p>
-
-            <form id="payment-form" style="display: none; margin-top: 1rem;">
-        <div id="payment-element">
-                  </div>
-                <div id="card-errors" role="alert" style="color: var(--error-color); margin-top: 0.5rem;"></div>
-
-        <button id="submit-payment-button" type="submit" class="checkout-btn" style="margin-top: 1rem;">
-          Pay Now
-        </button>
-                <div id="payment-message" role="alert" style="margin-top: 0.5rem;">
-        </div>
-      </form>
-    </div>
+  <div class="overlay" id="cartOverlay"></div>
+  <aside class="cart-panel" id="cartPanel" aria-labelledby="cartHeading">
+    <div class="cart-header">
+      <h2 id="cartHeading">Your Cart</h2>
+      <button class="cart-close" id="cartCloseButton" aria-label="Close cart">&times;</button>
+    </div>
+    <div class="cart-content" id="cartItems">
+          <p>Your cart is empty.</p>
+    </div>
+    <div class="cart-footer">
+      <p>Total: $<span id="cartTotal">0.00</span></p>
+      
+      <a href="#" class="checkout-btn-link disabled" id="checkoutBtnLink" target="_blank" rel="noopener noreferrer">
+        Proceed to Checkout
+      </a>
+      
+      <p id="checkout-info">You will be redirected to our secure Stripe checkout page.</p>
+    </div>
 </aside>
 
-  <footer class="footer">
-    <div class="footer-container">
-      <div class="footer-col about">
-        <h4>About Eritrean Bookstore</h4>
-        <p>We curate Eritrea’s finest literary works—celebrating culture, history, and heritage through timeless books and stories.</p>
-      </div>
-      <div class="footer-col links">
-        <h4>Quick Links</h4>
-        <ul>
-          <li><a href="#books">Browse Books</a></li>
-                    <li><a href="#footer-contact">Contact Us</a></li>
-          <li><a href="admin.html">Admin Panel</a></li>         </ul>
-      </div>
-      <div class="footer-col contact" id="footer-contact">         <h4>Connect With Us</h4>
-        <p>Email: <a href="mailto:contact@eritreanbookstore.com">contact@eritreanbookstore.com</a></p>
-        <div class="social-icons">
-                    <a href="#" aria-label="Facebook" title="Facebook"><i class="fab fa-facebook-f"></i></a>
-          <a href="#" aria-label="Twitter" title="Twitter"><i class="fab fa-twitter"></i></a>
-          <a href="#" aria-label="Instagram" title="Instagram"><i class="fab fa-instagram"></i></a>
-        </div>
-      </div>
-    </div>
-    <div class="footer-bottom">
-       <p>&copy; <span id="currentYear"></span> <strong>Eritrean Bookstore</strong>. All rights reserved.</p>     </div>
-  </footer>
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-col about">
+        <h4>About Erishipping Surprise</h4>
+        <p>We curate the finest surprise packages, books, and gifts—celebrating culture, history, and heritage.</p>
+      </div>
+      <div class="footer-col links">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="#books">Browse Products</a></li>
+          <li><a href="#footer-contact">Contact Us</a></li>
+          <li><a href="admin.html">Admin Panel</a></li>
+        </ul>
+      </div>
+      <div class="footer-col contact" id="footer-contact">
+        <h4>Connect With Us</h4>
+        <p>Email: <a href="mailto:contact@erishipping.com">contact@erishipping.com</a></p>
+        <div class="social-icons">
+          <a href="#" aria-label="Facebook" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" aria-label="Twitter" title="Twitter"><i class="fab fa-twitter"></i></a>
+          <a href="#" aria-label="Instagram" title="Instagram"><i class="fab fa-instagram"></i></a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+        <p>&copy; <span id="currentYear"></span> <strong>Erishipping Surprise</strong>. All rights reserved.</p>
+    </div>
+  </footer>
 
-  <script>
- // --- Firebase Configuration ---
-// WARNING: Exposing API keys client-side is common in Firebase web apps,
-// but ensure your Firestore security rules are properly configured to protect your data.
+  <script>
+// --- Firebase Configuration ---
+// Ensure your Firebase security rules are properly configured to protect your data.
 const firebaseConfig = {
-    apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0", // Replace with your actual API Key
-    authDomain: "eritrean-bookstore.firebaseapp.com",
-    projectId: "eritrean-bookstore",
-    storageBucket: "eritrean-bookstore.appspot.com", // Verify this is correct for your project
-    messagingSenderId: "645911365846",
-    appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
+    apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0", // Replace with your actual API Key
+    authDomain: "eritrean-bookstore.firebaseapp.com",
+    projectId: "eritrean-bookstore",
+    storageBucket: "eritrean-bookstore.appspot.com",
+    messagingSenderId: "645911365846",
+    appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
 };
 
-// --- Initialize Firebase (v8 Compat SDKs are expected) ---
-let app, db, functions;
+// --- Initialize Firebase ---
+let app, db;
 try {
-    if (typeof firebase === 'undefined' || typeof firebase.initializeApp !== 'function') {
-        throw new Error("Firebase SDK (v8 compat) not loaded. Ensure compat scripts are included in <head>.");
-    }
-    app = firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore(); // Use v8 compat syntax
-    functions = firebase.functions(); // Use v8 compat syntax
-
-    // Optional: Connect to Firebase Emulator if running locally
-    // if (window.location.hostname === "localhost") {
-    //     console.log("Connecting to Firebase Emulators");
-    //     db.useEmulator("localhost", 8080);
-    //     functions.useEmulator("localhost", 5001); // Change port if needed
-    // }
-
+    if (typeof firebase === 'undefined' || typeof firebase.initializeApp !== 'function') {
+        throw new Error("Firebase SDK not loaded.");
+    }
+    app = firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
 } catch (error) {
-    console.error("CRITICAL: Firebase Initialization Error:", error);
-    const body = document.querySelector('body');
-    if (body) {
-        body.innerHTML = `<p style="color: red; padding: 20px; font-family: sans-serif;"><b>Application Initialization Failed.</b><br>Could not initialize Firebase. Please check the browser console for details.</p>`;
-    }
+    console.error("CRITICAL: Firebase Initialization Error:", error);
+    const body = document.querySelector('body');
+    if (body) {
+        body.innerHTML = `<p style="color: red; padding: 20px; font-family: sans-serif;"><b>Application Initialization Failed.</b><br>Could not initialize Firebase. Please check the browser console for details.</p>`;
+    }
 }
 
 // --- Constants ---
 const BOOKS_COLLECTION = 'books';
-const ORDERS_COLLECTION = 'orders'; // Used server-side in Cloud Function (Placeholder)
-const DEBOUNCE_DELAY = 300; // ms for search debounce
-const STRIPE_CURRENCY = 'usd'; // Set your currency code (e.g., 'usd', 'cad')
+const DEBOUNCE_DELAY = 300;
+
+// --- IMPORTANT: Paste your Stripe Payment Link here! ---
+// This link should be for a "Customer chooses what to pay" product.
+const STRIPE_PAYMENT_LINK_URL = "https://buy.stripe.com/PASTE_YOUR_LINK_HERE";
+
 
 // --- Global State ---
 let allBooks = [];
-// Load cart from localStorage, ensure it's an array
 let cart = Array.isArray(JSON.parse(localStorage.getItem('cart'))) ? JSON.parse(localStorage.getItem('cart')) : [];
 let searchTimeout;
 
-// --- Stripe Initialization ---
-// !!! CRITICAL: Replace with your ACTUAL Stripe Publishable Key !!!
-const stripePublishableKey = 'pk_test_51QicnFFG9IKXiGXaYflDuhisySfvBGpcx5ZLbK3hFlPyYyZN4FMe94jZz6pDGRm4H3IwlrygEdSoUipBfM7TPGyS00HaKcfLaU'; // e.g., pk_test_51... or pk_live_51...
-let stripe = null;
-let paymentIntentClientSecret = null; // Holds the secret from the Cloud Function
-let elements; // Holds the Stripe Elements instance
 
-if (!stripePublishableKey || !stripePublishableKey.startsWith('pk_')) {
-    console.error("CRITICAL: Stripe Publishable Key is missing or invalid! Payment processing will fail.");
-    if(document.getElementById('orderStatus')) {
-        document.getElementById('orderStatus').textContent = "Payment Error: Invalid Stripe configuration.";
-        document.getElementById('orderStatus').className = 'error';
-    }
-} else {
-    try {
-        stripe = Stripe(stripePublishableKey);
-        console.log("Stripe initialized successfully.");
-    } catch (e) {
-        console.error("CRITICAL: Failed to initialize Stripe. Is the Stripe SDK loaded correctly and the key valid?", e);
-        if(document.getElementById('orderStatus')) {
-            document.getElementById('orderStatus').textContent = "Payment system error. Please try again later.";
-            document.getElementById('orderStatus').className = 'error';
-        }
-    }
-}
+// --- REMOVED: Stripe Initialization is no longer needed on this page ---
+
 
 // --- DOM Element Caching ---
-let booksGrid, searchInput, cartPanel, cartOverlay, cartItemsContainer, cartTotalEl, cartCountEl, checkoutBtn, orderStatusEl, cartToggleButton, cartCloseButton, booksErrorEl, currentYearEl, paymentForm, paymentElement, paymentMessage, paymentSubmitButton, cardErrorsEl;
+let booksGrid, searchInput, cartPanel, cartOverlay, cartItemsContainer, cartTotalEl, cartCountEl, checkoutBtnLink, cartToggleButton, cartCloseButton, booksErrorEl, currentYearEl;
 
 function cacheDOMElements() {
-    booksGrid = document.getElementById('booksGrid');
-    searchInput = document.getElementById('searchInput');
-    cartPanel = document.getElementById('cartPanel');
-    cartOverlay = document.getElementById('cartOverlay');
-    cartItemsContainer = document.getElementById('cartItems');
-    cartTotalEl = document.getElementById('cartTotal');
-    cartCountEl = document.getElementById('cart-count');
-    checkoutBtn = document.getElementById('checkoutBtn');
-    orderStatusEl = document.getElementById('orderStatus');
-    cartToggleButton = document.getElementById('cartToggleButton');
-    cartCloseButton = document.getElementById('cartCloseButton');
-    booksErrorEl = document.getElementById('booksError');
-    currentYearEl = document.getElementById('currentYear');
+    booksGrid = document.getElementById('booksGrid');
+    searchInput = document.getElementById('searchInput');
+    cartPanel = document.getElementById('cartPanel');
+    cartOverlay = document.getElementById('cartOverlay');
+    cartItemsContainer = document.getElementById('cartItems');
+    cartTotalEl = document.getElementById('cartTotal');
+    cartCountEl = document.getElementById('cart-count');
+    // CHANGED: Caching the new checkout link element
+    checkoutBtnLink = document.getElementById('checkoutBtnLink');
+    cartToggleButton = document.getElementById('cartToggleButton');
+    cartCloseButton = document.getElementById('cartCloseButton');
+    booksErrorEl = document.getElementById('booksError');
+    currentYearEl = document.getElementById('currentYear');
 
-    // --- Payment Form Elements (CRITICAL: Ensure these IDs exist in your HTML!) ---
-    paymentForm = document.getElementById('payment-form');
-    paymentElement = document.getElementById('payment-element');
-    paymentMessage = document.getElementById('payment-message');
-    paymentSubmitButton = document.getElementById('submit-payment-button');
-    cardErrorsEl = document.getElementById('card-errors'); // Added for Stripe errors
-
-    if (!booksGrid || !searchInput || !cartPanel || !checkoutBtn || !cartToggleButton || !cartCloseButton) {
-        console.error("Essential application DOM elements are missing. Functionality will be limited. Check HTML IDs.");
-        // You might want to disable buttons or show a fatal error message here
-    }
-    // Check for payment elements - only critical if checkout is attempted
-    if (!paymentForm || !paymentElement || !paymentMessage || !paymentSubmitButton || !cardErrorsEl) {
-        console.warn("Payment form related DOM elements (payment-form, payment-element, payment-message, submit-payment-button, card-errors) missing. Payment functionality will not work. This is expected if Stripe checkout hasn't started.");
-    }
+    if (!booksGrid || !searchInput || !cartPanel || !checkoutBtnLink || !cartToggleButton) {
+        console.error("Essential application DOM elements are missing. Functionality will be limited.");
+    }
 }
 
 // --- Utility Functions ---
 function scrollToElement(id) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-    }
+    const element = document.getElementById(id);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 function toggleCart() {
-    if (!cartPanel || !cartOverlay) {
-        console.error("Cart panel or overlay element not found.");
-        return;
-    }
-    const isOpen = cartPanel.classList.contains('open');
-    cartPanel.classList.toggle('open');
-    cartOverlay.classList.toggle('show');
+    if (!cartPanel || !cartOverlay) {
+        console.error("Cart panel or overlay element not found.");
+        return;
+    }
+    const isOpen = cartPanel.classList.contains('open');
+    cartPanel.classList.toggle('open');
+    cartOverlay.classList.toggle('show');
 
-    // Hide payment form and messages when cart closes or re-opens
-    if (!isOpen) {
-        renderCart(); // Re-render cart content when opening
-    }
-    if (paymentForm) paymentForm.style.display = 'none';
-    if (paymentMessage) paymentMessage.textContent = '';
-    if (cardErrorsEl) cardErrorsEl.textContent = '';
-    if (orderStatusEl) orderStatusEl.textContent = '';
-    if (checkoutBtn) checkoutBtn.style.display = 'block'; // Show checkout button
+    if (!isOpen) {
+        renderCart(); // Re-render cart content when opening
+    }
 }
 
 function saveCart() {
-    try {
-        localStorage.setItem('cart', JSON.stringify(cart));
-        updateCartCount();
-        if (checkoutBtn) {
-            checkoutBtn.disabled = cart.length === 0;
-        }
-    } catch (e) {
-        console.error("Error saving cart to localStorage:", e);
-    }
+    try {
+        localStorage.setItem('cart', JSON.stringify(cart));
+        updateCartCount();
+        updateCheckoutLink(); // CHANGED: Update the checkout link state
+    } catch (e) {
+        console.error("Error saving cart to localStorage:", e);
+    }
 }
 
 function updateCartCount() {
-    if (!cartCountEl) return;
-    // Ensure cart is an array before reducing
-    const count = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item?.quantity || 0), 0) : 0;
-    cartCountEl.textContent = count;
-    cartCountEl.classList.toggle('hidden', count === 0); // Optional: hide badge if 0
+    if (!cartCountEl) return;
+    const count = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item?.quantity || 0), 0) : 0;
+    cartCountEl.textContent = count;
+}
+
+// CHANGED: New function to enable/disable the checkout link
+function updateCheckoutLink() {
+    if (!checkoutBtnLink) return;
+    if (cart.length > 0) {
+        checkoutBtnLink.classList.remove('disabled');
+        // Check if the user has provided a real link
+        if (STRIPE_PAYMENT_LINK_URL && !STRIPE_PAYMENT_LINK_URL.includes("PASTE_YOUR_LINK_HERE")) {
+            checkoutBtnLink.href = STRIPE_PAYMENT_LINK_URL;
+        } else {
+             checkoutBtnLink.href = '#'; // Prevent navigation if link is not set
+             console.warn("Stripe Payment Link is not configured. Checkout will not work.");
+        }
+    } else {
+        checkoutBtnLink.classList.add('disabled');
+        checkoutBtnLink.href = '#';
+    }
 }
 
 function debounce(func, delay) {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(func, delay);
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(func, delay);
 }
 
 function escapeHTML(str) {
-    if (typeof str !== 'string') return str;
-    const div = document.createElement('div');
-    div.appendChild(document.createTextNode(str));
-    return div.innerHTML;
+    if (typeof str !== 'string') return str;
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
 }
 
 // --- Core Application Logic ---
 async function fetchBooks() {
-    if (!booksGrid || !booksErrorEl) {
-        console.error("Missing booksGrid or booksErrorEl for fetchBooks.");
-        return;
-    }
-    booksErrorEl.textContent = '';
-    booksGrid.innerHTML = '<p>Loading books...</p>';
-    try {
-        if (!db) throw new Error("Firestore database is not initialized.");
-        // Order by title for consistent display
-        const snapshot = await db.collection(BOOKS_COLLECTION).orderBy('title').get();
-        if (snapshot.empty) {
-            booksGrid.innerHTML = '<p>No books found in the collection.</p>';
-            allBooks = [];
-        } else {
-            allBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // Ensure stock is treated as number, default to 0 if missing/invalid
-            allBooks = allBooks.map(book => ({
-                ...book,
-                stock: typeof book.stock === 'number' && book.stock >= 0 ? book.stock : 0,
-                price: typeof book.price === 'number' && book.price >= 0 ? book.price : 0.00
-            }));
-        }
-        renderBooks(allBooks);
-    } catch (error) {
-        console.error("Error fetching books:", error);
-        booksErrorEl.textContent = 'Failed to load books. Please check connection or Firestore configuration/rules.';
-        booksGrid.innerHTML = ''; // Clear loading message on error
-        allBooks = [];
-    }
+    if (!booksGrid || !booksErrorEl) {
+        console.error("Missing booksGrid or booksErrorEl for fetchBooks.");
+        return;
+    }
+    booksErrorEl.textContent = '';
+    booksGrid.innerHTML = '<p>Loading products...</p>';
+    try {
+        if (!db) throw new Error("Firestore database is not initialized.");
+        const snapshot = await db.collection(BOOKS_COLLECTION).orderBy('title').get();
+        if (snapshot.empty) {
+            booksGrid.innerHTML = '<p>No products found in the collection.</p>';
+            allBooks = [];
+        } else {
+            allBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            allBooks = allBooks.map(book => ({
+                ...book,
+                stock: typeof book.stock === 'number' && book.stock >= 0 ? book.stock : 0,
+                price: typeof book.price === 'number' && book.price >= 0 ? book.price : 0.00
+            }));
+        }
+        renderBooks(allBooks);
+    } catch (error) {
+        console.error("Error fetching products:", error);
+        booksErrorEl.textContent = 'Failed to load products. Please check connection or Firestore configuration/rules.';
+        booksGrid.innerHTML = '';
+        allBooks = [];
+    }
 }
 
 function renderBooks(bookList) {
-    if (!booksGrid || !searchInput || !booksErrorEl) {
-        console.error("Missing critical elements for renderBooks.");
-        return;
-    }
-    booksGrid.innerHTML = ''; // Clear current grid content
-    if (!Array.isArray(bookList)) {
-        booksGrid.innerHTML = '<p>Error: Book data format incorrect.</p>';
-        console.error("renderBooks received invalid data:", bookList);
-        return;
-    }
-    const searchTerm = searchInput.value.trim().toLowerCase();
-    if (bookList.length === 0) {
-        if (searchTerm !== '') {
-            booksGrid.innerHTML = '<p>No books match your search.</p>';
-        } else if (allBooks.length === 0 && booksErrorEl.textContent === '') {
-            booksGrid.innerHTML = '<p>No books available at the moment.</p>';
-        } else if (booksErrorEl.textContent === '') {
-            booksGrid.innerHTML = '<p>No books to display.</p>'; // Should not happen if allBooks is populated
-        }
-    } else {
-        bookList.forEach(book => {
-            const card = document.createElement('div');
-            card.className = 'book-card';
-            // Use escaped data for display
-            const title = escapeHTML(book.title || 'Untitled Book');
-            const stock = book.stock; // Use the processed stock number
-            const price = book.price; // Use the processed price number
-            const imgURL = escapeHTML(book.imgURL || 'https://via.placeholder.com/200x250?text=Book+Cover'); // Placeholder with text
-            const isOutOfStock = stock <= 0;
+    if (!booksGrid || !searchInput || !booksErrorEl) return;
 
-            card.innerHTML = `
-                <img src="${imgURL}" alt="Cover image for ${title}" loading="lazy">
-                <div class="book-info">
-                    <div>
-                        <h3>${title}</h3>
-                        <p>$${price.toFixed(2)}</p>
-                        ${isOutOfStock ? '<p style="color: var(--error-color); font-weight: bold; font-size: 0.9rem;">Out of Stock</p>' : `<p>In Stock: ${stock}</p>`}
-                    </div>
-                    <div class="controls">
-                        <label for="qty-${escapeHTML(book.id)}" class="sr-only">Quantity for ${title}</label>
-                        <input type="number" min="1" max="${stock}" value="1" class="qty" id="qty-${escapeHTML(book.id)}" aria-label="Quantity for ${title}" ${isOutOfStock ? 'disabled' : ''}>
-                        <button class="add-btn" data-book-id="${escapeHTML(book.id)}" ${isOutOfStock ? 'disabled' : ''}>
-                            ${isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
-                        </button>
-                    </div>
-                </div>`;
-            booksGrid.appendChild(card);
-        });
-        // Event listeners are now handled by delegation in setupEventListeners
-    }
+    booksGrid.innerHTML = '';
+    if (!Array.isArray(bookList) || bookList.length === 0) {
+        const searchTerm = searchInput.value.trim().toLowerCase();
+        if (searchTerm !== '') {
+            booksGrid.innerHTML = '<p>No products match your search.</p>';
+        } else {
+            booksGrid.innerHTML = '<p>No products available at the moment.</p>';
+        }
+        return;
+    }
+
+    bookList.forEach(book => {
+        const card = document.createElement('div');
+        card.className = 'book-card';
+        const title = escapeHTML(book.title || 'Untitled Product');
+        const stock = book.stock;
+        const price = book.price;
+        const imgURL = escapeHTML(book.imgURL || 'https://via.placeholder.com/200x250?text=Product+Image');
+        const isOutOfStock = stock <= 0;
+
+        card.innerHTML = `
+            <img src="${imgURL}" alt="Cover image for ${title}" loading="lazy">
+            <div class="book-info">
+                <div>
+                    <h3>${title}</h3>
+                    <p>$${price.toFixed(2)}</p>
+                    ${isOutOfStock ? '<p style="color: var(--error-color); font-weight: bold; font-size: 0.9rem;">Out of Stock</p>' : `<p>In Stock: ${stock}</p>`}
+                </div>
+                <div class="controls">
+                    <label for="qty-${escapeHTML(book.id)}" class="sr-only">Quantity for ${title}</label>
+                    <input type="number" min="1" max="${stock}" value="1" class="qty" id="qty-${escapeHTML(book.id)}" aria-label="Quantity for ${title}" ${isOutOfStock ? 'disabled' : ''}>
+                    <button class="add-btn" data-book-id="${escapeHTML(book.id)}" ${isOutOfStock ? 'disabled' : ''}>
+                        ${isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                    </button>
+                </div>
+            </div>`;
+        booksGrid.appendChild(card);
+    });
 }
 
 function handleSearch() {
-    if (!searchInput) return;
-    const query = searchInput.value.toLowerCase().trim();
-    // Filter from the complete list of books
-    const filteredBooks = allBooks.filter(book =>
-        book.title && typeof book.title === 'string' && book.title.toLowerCase().includes(query)
-    );
-    // Render the filtered list
-    renderBooks(filteredBooks);
+    if (!searchInput) return;
+    const query = searchInput.value.toLowerCase().trim();
+    const filteredBooks = allBooks.filter(book =>
+        book.title && typeof book.title === 'string' && book.title.toLowerCase().includes(query)
+    );
+    renderBooks(filteredBooks);
 }
 
 function addToCart(bookId, quantityToAdd) {
-    const book = allBooks.find(b => b.id === bookId);
-    // Ensure book is found and has valid stock/price
-    if (!book || typeof book.price !== 'number' || typeof book.stock !== 'number') {
-        console.error("Attempted to add invalid book data:", bookId, book);
-        alert("Error: Could not add item. Book data is missing or invalid.");
-        return;
-    }
-    if (book.stock <= 0) {
-        alert(`"${book.title || 'This item'}" is out of stock.`);
-        renderBooks(allBooks); // Re-render to update button state if needed
-        return;
-    }
+    const book = allBooks.find(b => b.id === bookId);
+    if (!book || typeof book.price !== 'number' || typeof book.stock !== 'number') {
+        alert("Error: Could not add item. Product data is missing or invalid.");
+        return;
+    }
+    if (book.stock <= 0) {
+        alert(`"${book.title || 'This item'}" is out of stock.`);
+        renderBooks(allBooks);
+        return;
+    }
 
-    const quantity = parseInt(quantityToAdd, 10);
-    if (isNaN(quantity) || quantity < 1) {
-        console.warn("Attempted to add invalid quantity:", quantityToAdd);
-        alert("Please enter a valid positive quantity.");
-        // Find the corresponding input and reset its value if possible
-        const qtyInput = document.getElementById(`qty-${escapeHTML(bookId)}`);
-        if (qtyInput) qtyInput.value = '1';
-        return;
-    }
+    const quantity = parseInt(quantityToAdd, 10);
+    if (isNaN(quantity) || quantity < 1) {
+        alert("Please enter a valid positive quantity.");
+        const qtyInput = document.getElementById(`qty-${escapeHTML(bookId)}`);
+        if (qtyInput) qtyInput.value = '1';
+        return;
+    }
 
-    const existingCartItemIndex = cart.findIndex(item => item.id === bookId);
-    let currentCartQty = existingCartItemIndex > -1 ? cart[existingCartItemIndex].quantity : 0;
-    const potentialNewTotalQty = currentCartQty + quantity;
+    const existingCartItemIndex = cart.findIndex(item => item.id === bookId);
+    let currentCartQty = existingCartItemIndex > -1 ? cart[existingCartItemIndex].quantity : 0;
+    const potentialNewTotalQty = currentCartQty + quantity;
 
-    if (book.stock < potentialNewTotalQty) {
-        alert(`Sorry, only ${book.stock} "${book.title || 'item'}" available in total. You already have ${currentCartQty} in your cart. You can add ${book.stock - currentCartQty}.`);
-        // Find the corresponding input and reset its value if possible
-        const qtyInput = document.getElementById(`qty-${escapeHTML(bookId)}`);
-        if (qtyInput) qtyInput.value = book.stock - currentCartQty > 0 ? book.stock - currentCartQty : '1'; // Suggest adding the remaining amount
-        return;
-    }
-    if (existingCartItemIndex > -1) {
-        cart[existingCartItemIndex].quantity = potentialNewTotalQty;
-    } else {
-        cart.push({
-            id: bookId,
-            title: book.title,
-            price: book.price,
-            quantity: quantity,
-            imgURL: book.imgURL
-        });
-    }
-    saveCart();
-    // Give visual feedback on the add button
-    const addButton = document.querySelector(`.add-btn[data-book-id="${escapeHTML(bookId)}"]`);
-    if (addButton) {
-        const originalText = addButton.textContent;
-        addButton.textContent = 'Added!';
-        addButton.disabled = true;
-        setTimeout(() => {
-            addButton.textContent = originalText;
-            // Re-enable button only if the current stock allows adding more
-            const updatedItemInCart = cart.find(item => item.id === bookId);
-            const currentStock = allBooks.find(b => b.id === bookId)?.stock ?? 0;
-            if (!updatedItemInCart || updatedItemInCart.quantity < currentStock) {
-                addButton.disabled = false;
-            }
-        }, 1500); // Increased delay slightly
-    }
-
-    if (cartPanel && cartPanel.classList.contains('open')) {
-        renderCart();
-    }
+    if (book.stock < potentialNewTotalQty) {
+        alert(`Sorry, only ${book.stock} "${book.title || 'item'}" available. You have ${currentCartQty} in your cart.`);
+        const qtyInput = document.getElementById(`qty-${escapeHTML(bookId)}`);
+        if (qtyInput) qtyInput.value = Math.max(1, book.stock - currentCartQty);
+        return;
+    }
+    if (existingCartItemIndex > -1) {
+        cart[existingCartItemIndex].quantity = potentialNewTotalQty;
+    } else {
+        cart.push({
+            id: bookId,
+            title: book.title,
+            price: book.price,
+            quantity: quantity,
+            imgURL: book.imgURL
+        });
+    }
+    saveCart();
+    
+    const addButton = document.querySelector(`.add-btn[data-book-id="${escapeHTML(bookId)}"]`);
+    if (addButton) {
+        const originalText = addButton.textContent;
+        addButton.textContent = 'Added!';
+        addButton.disabled = true;
+        setTimeout(() => {
+            addButton.textContent = originalText;
+            const updatedItemInCart = cart.find(item => item.id === bookId);
+            const currentStock = allBooks.find(b => b.id === bookId)?.stock ?? 0;
+            if (!updatedItemInCart || updatedItemInCart.quantity < currentStock) {
+                addButton.disabled = false;
+            }
+        }, 1500);
+    }
 }
 
 function renderCart() {
-    if (!cartItemsContainer || !cartTotalEl || !checkoutBtn || !orderStatusEl) return;
+    if (!cartItemsContainer || !cartTotalEl) return;
 
-    // Clear previous content but keep event listeners via delegation
-    cartItemsContainer.innerHTML = '';
-    let currentTotal = 0;
+    if (cart.length === 0) {
+        cartItemsContainer.innerHTML = '<p>Your cart is empty.</p>';
+        cartTotalEl.textContent = '0.00';
+        return;
+    }
 
-    // Filter out invalid items before rendering/calculating total
-    cart = cart.filter(item => item && item.id && typeof item.quantity === 'number' && item.quantity > 0 && typeof item.price === 'number' && !isNaN(item.price));
-    saveCart(); // Save filtered cart back
+    cartItemsContainer.innerHTML = '';
+    let total = 0;
+    cart.forEach(item => {
+        const itemTotal = (item.price || 0) * (item.quantity || 0);
+        total += itemTotal;
+        const bookInStore = allBooks.find(b => b.id === item.id);
+        const maxStock = bookInStore ? bookInStore.stock : item.quantity;
 
-    if (cart.length === 0) {
-        cartItemsContainer.innerHTML = '<p>Your cart is empty.</p>';
-        cartTotalEl.textContent = '0.00';
-        checkoutBtn.disabled = true;
-        if (paymentForm) paymentForm.style.display = 'none'; // Hide payment form
-        if (paymentMessage) paymentMessage.textContent = '';
-        if (cardErrorsEl) cardErrorsEl.textContent = '';
-        if (orderStatusEl) orderStatusEl.textContent = '';
-        return;
-    }
-
-    cart.forEach(item => {
-        const price = item.price;
-        const itemTotal = price * item.quantity;
-        currentTotal += itemTotal;
-        const bookInStockData = allBooks.find(b => b.id === item.id);
-        const currentStock = bookInStockData?.stock ?? 0; // Get current stock from fetched book data
-        const title = escapeHTML(item.title || 'Untitled Item');
-        const div = document.createElement('div');
-        div.className = 'cart-item';
-        div.innerHTML = `
-            <img src="${escapeHTML(item.imgURL || 'https://via.placeholder.com/50x60?text=Book')}" alt="Cover image for ${title}">
-            <div class="item-info">
-                <strong>${title}</strong>
-                <span>$${price.toFixed(2)} x ${item.quantity} = $${itemTotal.toFixed(2)}</span>
-                ${item.quantity > currentStock ? `<br><small style="color:var(--error-color); font-weight:bold;">Warning: Qty exceeds available stock (${currentStock})!</small>` : ''}
-            </div>
-            <div class="item-controls">
-                <button class="qty-btn decrease-qty" data-id="${escapeHTML(item.id)}" data-change="-1" aria-label="Decrease quantity of ${title}" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
-                <span class="item-qty" aria-live="polite">${item.quantity}</span>
-                <button class="qty-btn increase-qty" data-id="${escapeHTML(item.id)}" data-change="1" ${item.quantity >= currentStock ? 'disabled' : ''} aria-label="Increase quantity of ${title}">+</button>
-                <button class="remove-btn" data-id="${escapeHTML(item.id)}" aria-label="Remove ${title} from cart">&times;</button>
-            </div>`;
-        cartItemsContainer.appendChild(div);
-    });
-    cartTotalEl.textContent = currentTotal.toFixed(2);
-    checkoutBtn.disabled = false; // Enable checkout button if cart is not empty
+        const itemEl = document.createElement('div');
+        itemEl.className = 'cart-item';
+        itemEl.innerHTML = `
+            <img src="${escapeHTML(item.imgURL || 'https://via.placeholder.com/50x60')}" alt="${escapeHTML(item.title)}">
+            <div class="item-info">
+                <strong>${escapeHTML(item.title)}</strong>
+                <span>$${(item.price || 0).toFixed(2)} x ${item.quantity} = $${itemTotal.toFixed(2)}</span>
+            </div>
+            <div class="item-controls">
+                <button class="qty-btn" data-id="${escapeHTML(item.id)}" data-change="-1" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
+                <span class="item-qty">${item.quantity}</span>
+                <button class="qty-btn" data-id="${escapeHTML(item.id)}" data-change="1" ${item.quantity >= maxStock ? 'disabled' : ''}>+</button>
+                <button class="remove-btn" data-id="${escapeHTML(item.id)}">&times;</button>
+            </div>
+        `;
+        cartItemsContainer.appendChild(itemEl);
+    });
+    cartTotalEl.textContent = total.toFixed(2);
 }
 
-function updateQty(id, newQty) {
-    const quantity = parseInt(newQty, 10);
-    if (isNaN(quantity) || quantity < 0) {
-        console.warn("Invalid new quantity:", newQty);
-        renderCart(); // Re-render to reset display if invalid input
-        return;
-    }
-    if (quantity === 0) {
-        return removeItem(id);
-    }
-    const book = allBooks.find(b => b.id === id);
-    const stock = book?.stock ?? 0;
-    if (quantity > stock) {
-        alert(`Sorry, only ${stock} items available for "${book?.title || 'this item'}".`);
-        // Find the cart item and revert its quantity visually
-        const cartItem = cart.find(item => item.id === id);
-        if (cartItem) {
-            // Attempt to revert the visual quantity display without re-rendering the whole cart
-            const qtySpan = cartItemsContainer.querySelector(`.cart-item .item-qty[aria-live="polite"]`);
-            if(qtySpan) qtySpan.textContent = cartItem.quantity;
-        }
-        renderCart(); // Still re-render to update button disabled states
-        return;
-    }
-    const itemIndex = cart.findIndex(item => item.id === id);
-    if (itemIndex > -1) {
-        cart[itemIndex].quantity = quantity;
-        saveCart();
-        renderCart();
-    }
+function updateCartItemQuantity(bookId, change) {
+    const itemIndex = cart.findIndex(item => item.id === bookId);
+    if (itemIndex === -1) return;
+
+    const bookInStore = allBooks.find(b => b.id === bookId);
+    const maxStock = bookInStore ? bookInStore.stock : cart[itemIndex].quantity;
+    const newQuantity = cart[itemIndex].quantity + change;
+
+    if (newQuantity > 0 && newQuantity <= maxStock) {
+        cart[itemIndex].quantity = newQuantity;
+    } else if (newQuantity <= 0) {
+        cart.splice(itemIndex, 1);
+    }
+    saveCart();
+    renderCart(); // Re-render to show changes
 }
 
-function removeItem(id) {
-    cart = cart.filter(item => item.id !== id);
-    saveCart();
-    renderCart();
+function removeFromCart(bookId) {
+    cart = cart.filter(item => item.id !== bookId);
+    saveCart();
+    renderCart();
 }
 
-// --- Stripe Payment Element Functions ---
-async function initializePaymentElement() {
-    if (!stripe) {
-        console.error("Stripe.js not initialized. Cannot create Payment Element.");
-        if(orderStatusEl) {
-            orderStatusEl.textContent = "Payment system error. Please refresh.";
-            orderStatusEl.className = 'error';
-        }
-        if (paymentForm) paymentForm.style.display = 'none';
-        return false;
-    }
-    if (!paymentElement || !paymentForm || !paymentMessage || !cardErrorsEl) {
-        console.error("Payment form DOM elements (#payment-element, #payment-form, #payment-message, #card-errors) missing. Cannot initialize Stripe.");
-        if(orderStatusEl) {
-            orderStatusEl.textContent = "Internal error setting up payment form.";
-            orderStatusEl.className = 'error';
-        }
-        if (paymentForm) paymentForm.style.display = 'none';
-        return false;
-    }
+// --- REMOVED: All functions related to Stripe Elements and backend calls ---
+// - handleCheckout
+// - initializePaymentForm
+// - checkStatus
+// - showMessage
 
-    // IMPORTANT: You need a backend (Cloud Function) to create the PaymentIntent
-    // and return its client secret. This call assumes you have a callable function
-    // named 'createPaymentIntent'.
-    if (!functions) {
-        console.error("Firebase Functions not initialized. Cannot create Payment Intent.");
-        if(orderStatusEl) {
-            orderStatusEl.textContent = "Server error: Could not prepare payment.";
-            orderStatusEl.className = 'error';
-        }
-        if (paymentForm) paymentForm.style.display = 'none';
-        return false;
-    }
-
-    if (orderStatusEl) {
-        orderStatusEl.textContent = 'Preparing payment...';
-        orderStatusEl.className = 'info';
-    }
-    if (checkoutBtn) checkoutBtn.disabled = true;
-
-
-    try {
-        // Call your Cloud Function to create a PaymentIntent
-        // The function should receive the cart items and return the client secret
-        // CORRECT
-const createPaymentIntent = functions.httpsCallable('processOrder');
-const result = await createPaymentIntent({
-  items: cart.map(item => ({
-    bookId: item.id,        // ID of the book (from Firestore)
-    quantity: item.quantity // How many
-  }))
-});
- // Pass cart data
-
-        if (result.data.clientSecret) {
-            paymentIntentClientSecret = result.data.clientSecret;
-
-            // Initialize Stripe Elements with the client secret
-            elements = stripe.elements({ clientSecret: paymentIntentClientSecret });
-
-            // Create and mount the Payment Element
-            const paymentElementInstance = elements.create('payment');
-            paymentElementInstance.mount(paymentElement);
-
-            if (orderStatusEl) orderStatusEl.textContent = ''; // Clear status message
-            if (paymentForm) paymentForm.style.display = 'block'; // Show the payment form
-            if (checkoutBtn) checkoutBtn.style.display = 'none'; // Hide the checkout button
-
-            return true; // Success
-        } else {
-            console.error("Cloud Function did not return a client secret:", result.data);
-            if(orderStatusEl) {
-                orderStatusEl.textContent = result.data.error || 'Could not prepare payment. Server error.';
-                orderStatusEl.className = 'error';
-            }
-            if (paymentForm) paymentForm.style.display = 'none';
-            if (checkoutBtn) checkoutBtn.disabled = false;
-            return false; // Failure
-        }
-    } catch (error) {
-        console.error("Error calling createPaymentIntent function:", error);
-        if(orderStatusEl) {
-            orderStatusEl.textContent = `Payment error: ${error.message || 'Communication failed.'}`;
-            orderStatusEl.className = 'error';
-        }
-        if (paymentForm) paymentForm.style.display = 'none';
-        if (checkoutBtn) checkoutBtn.disabled = false;
-        return false; // Failure
-    }
-}
-
-// --- Handle Payment Form Submission ---
-async function handlePaymentSubmit(event) {
-    event.preventDefault();
-
-    if (!stripe || !elements || !paymentIntentClientSecret || !paymentSubmitButton || !paymentMessage || !cardErrorsEl) {
-        console.error("Stripe, Elements, client secret, or form elements are missing.");
-        if(orderStatusEl) {
-            orderStatusEl.textContent = "Payment system not fully initialized.";
-            orderStatusEl.className = 'error';
-        }
-        return;
-    }
-
-    setPaymentLoading(true);
-    paymentMessage.textContent = ''; // Clear previous messages
-    cardErrorsEl.textContent = ''; // Clear previous errors
-
-    const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-            // !!! CRITICAL: Add your return_url here !!!
-            // Stripe will redirect the customer to this URL after they complete 3D Secure
-            // Make sure this URL is a valid page on your site (e.g., /order-complete)
-            return_url: window.location.origin + '/order-complete.html', // Example return URL
-        },
-    });
-
-    // This point is reached after 3D Secure or other flows
-    if (error) {
-        // This point will be reached if there is an immediate error when
-        // confirming the payment. Show error to your customer (e.g., insufficient funds)
-        cardErrorsEl.textContent = error.message;
-        cardErrorsEl.style.color = 'var(--error-color)';
-        if(orderStatusEl) {
-            orderStatusEl.textContent = 'Payment Failed.';
-            orderStatusEl.className = 'error';
-        }
-        setPaymentLoading(false);
-    } else {
-        // The payment has been processed!
-        // Your backend (Cloud Function) will handle the `payment_intent.succeeded` webhook
-        // This client-side code can now show a success message and clear the cart.
-        if (paymentIntent && paymentIntent.status === 'succeeded') {
-            paymentMessage.textContent = 'Payment Successful! Redirecting...';
-            paymentMessage.style.color = 'var(--success-color)';
-            if(orderStatusEl) {
-                orderStatusEl.textContent = 'Order placed successfully!';
-                orderStatusEl.className = 'success';
-            }
-
-            // Clear the cart after successful payment
-            cart = [];
-            saveCart();
-            // Render the empty cart display
-            renderCart();
-
-            setPaymentLoading(false);
-
-            // Redirect to a success page (as configured in return_url)
-            // The redirect happens automatically via `confirmPayment` if needed (e.g. 3DS)
-            // If no 3DS is needed, you might redirect manually or wait for the return_url
-            // For simplicity here, we'll rely on return_url or a manual redirect fallback
-            setTimeout(() => {
-                window.location.href = '/order-complete.html'; // Manual redirect fallback
-            }, 2000); // Redirect after 2 seconds
-        } else {
-            // This should ideally not happen if the backend handles succeeded status
-            console.warn("PaymentIntent status is not 'succeeded' after confirm:", paymentIntent);
-            paymentMessage.textContent = `Payment status: ${paymentIntent.status}. Awaiting confirmation.`;
-            paymentMessage.style.color = 'var(--info-color)';
-            setPaymentLoading(false);
-        }
-    }
-}
-
-// Helper function to show a loading state on payment form
-function setPaymentLoading(isLoading) {
-    if (!paymentSubmitButton) return;
-    if (isLoading) {
-        // Disable the button and show a spinner or text
-        paymentSubmitButton.disabled = true;
-        paymentSubmitButton.textContent = 'Processing...';
-        // Add a spinner if you have a CSS spinner class
-        // paymentSubmitButton.classList.add('spinner');
-    } else {
-        paymentSubmitButton.disabled = false;
-        paymentSubmitButton.textContent = 'Pay Now';
-        // Remove spinner
-        // paymentSubmitButton.classList.remove('spinner');
-    }
-}
-
-
-// --- Event Listener Setup ---
+// --- Event Listeners Setup ---
 function setupEventListeners() {
-    // --- Header/Navigation Listeners ---
-    if (cartToggleButton) {
-        cartToggleButton.addEventListener('click', toggleCart);
-    }
-    if (cartCloseButton) {
-        cartCloseButton.addEventListener('click', toggleCart);
-    }
-    if (cartOverlay) {
-        cartOverlay.addEventListener('click', toggleCart);
-    }
+    // Search input with debounce
+    searchInput.addEventListener('input', () => debounce(handleSearch, DEBOUNCE_DELAY));
 
-    // --- Search Input Listener (Debounced) ---
-    if (searchInput) {
-        searchInput.addEventListener('input', () => {
-            debounce(handleSearch, DEBOUNCE_DELAY);
-        });
-        // Also trigger search on pressing Enter
-        searchInput.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault(); // Prevent form submission if input is inside a form
-                clearTimeout(searchTimeout); // Cancel pending debounce
-                handleSearch();
-            }
-        });
-    }
+    // Add to cart (delegated)
+    booksGrid.addEventListener('click', (e) => {
+        if (e.target.classList.contains('add-btn')) {
+            const button = e.target;
+            const bookId = button.dataset.bookId;
+            const card = button.closest('.book-card');
+            const qtyInput = card.querySelector('.qty');
+            if (bookId && qtyInput) {
+                addToCart(bookId, qtyInput.value);
+            }
+        }
+    });
 
-    // --- Books Grid Event Delegation (Add to Cart) ---
-    if (booksGrid) {
-        booksGrid.addEventListener('click', (event) => {
-            const addButton = event.target.closest('.add-btn');
-            if (addButton && !addButton.disabled) {
-                const bookId = addButton.dataset.bookId;
-                const qtyInput = addButton.closest('.controls').querySelector('.qty');
-                const quantity = qtyInput ? parseInt(qtyInput.value, 10) : 1;
-                addToCart(bookId, quantity);
-            }
-        });
-    }
+    // Cart toggling
+    cartToggleButton.addEventListener('click', toggleCart);
+    cartCloseButton.addEventListener('click', toggleCart);
+    cartOverlay.addEventListener('click', toggleCart);
 
-    // --- Cart Items Event Delegation (Update Qty, Remove) ---
-    if (cartItemsContainer) {
-        cartItemsContainer.addEventListener('click', (event) => {
-            const targetButton = event.target.closest('button');
-            if (!targetButton) return;
-
-            const bookId = targetButton.dataset.id;
-            if (!bookId) return;
-
-            const item = cart.find(cartItem => cartItem.id === bookId);
-            if (!item) return;
-
-            if (targetButton.classList.contains('increase-qty')) {
-                updateQty(bookId, item.quantity + 1);
-            } else if (targetButton.classList.contains('decrease-qty')) {
-                updateQty(bookId, item.quantity - 1);
-            } else if (targetButton.classList.contains('remove-btn')) {
-                removeItem(bookId);
-            }
-        });
-    }
-
-
-    // --- Checkout Button Listener ---
-    if (checkoutBtn) {
-        checkoutBtn.addEventListener('click', async () => {
-            if (cart.length === 0) {
-                alert("Your cart is empty!");
-                return;
-            }
-            if (!stripe || !functions) {
-                alert("Payment system is not available. Please try again later.");
-                return;
-            }
-            // Initialize and show the payment form
-            const paymentSetupSuccess = await initializePaymentElement();
-            if (paymentSetupSuccess) {
-                // Payment form is now visible and mounted
-            } else {
-                console.error("Failed to setup payment element.");
-                // Error message is shown by initializePaymentElement
-            }
-        });
-    }
-
-    // --- Payment Form Submission Listener ---
-    if (paymentForm) {
-        paymentForm.addEventListener('submit', handlePaymentSubmit);
-    }
-
-    // --- Dynamically set current year in footer ---
-    if (currentYearEl) {
-        currentYearEl.textContent = new Date().getFullYear();
-    }
+    // Cart item controls (delegated)
+    cartItemsContainer.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.classList.contains('qty-btn')) {
+            const bookId = target.dataset.id;
+            const change = parseInt(target.dataset.change, 10);
+            updateCartItemQuantity(bookId, change);
+        } else if (target.classList.contains('remove-btn')) {
+            const bookId = target.dataset.id;
+            removeFromCart(bookId);
+        }
+    });
+    
+    // REMOVED: Event listener for old checkout button
 }
 
-
-// --- Initialization on DOM Load ---
+// --- Application Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM Content Loaded.");
-    cacheDOMElements(); // Get references to DOM elements
-    setupEventListeners(); // Set up event listeners
-    fetchBooks(); // Fetch books from Firestore
-    renderCart(); // Render cart items from localStorage on load
-    updateCartCount(); // Update cart count on load
-});
+    cacheDOMElements();
+    if (currentYearEl) {
+        currentYearEl.textContent = new Date().getFullYear();
+    }
+    
+    if (STRIPE_PAYMENT_LINK_URL.includes("PASTE_YOUR_LINK_HERE")) {
+        console.error("CRITICAL: You must set your Stripe Payment Link in the STRIPE_PAYMENT_LINK_URL constant for checkout to work.");
+        if (checkoutBtnLink) {
+            checkoutBtnLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                alert("Checkout is not configured. Please contact support.");
+            });
+        }
+    }
 
-  </script>
+    if (db) {
+        fetchBooks();
+    }
+    
+    setupEventListeners();
+    updateCartCount();
+    updateCheckoutLink(); // Initial check for the checkout link state
+});
+  </script>
 </body>
 </html>
