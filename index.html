@@ -10,19 +10,24 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
-    <script src="https://js.stripe.com/v3/"></script>
-  
-  <style>
-    /* CSS is unchanged from the previous version, so it is omitted here for brevity */
-    /* You can keep your existing CSS styles */
+    <style>
     :root {
-      --primary: #0044cc; --secondary: #0066ff; --accent: #ffdd00; --bg: #f9f9f9; --text: #333; --card-bg: #fff; --panel-width: 320px; --error-color: #d9534f; --success-color: #5cb85c; --info-color: #5bc0de;
+      --primary: #0044cc; /* A deep blue */
+      --secondary: #0066ff; /* A brighter blue */
+      --accent: #ffdd00; /* A bright yellow/gold */
+      --bg: #f9f9f9; /* Light grey background */
+      --text: #333; /* Dark grey text */
+      --card-bg: #fff; /* White card background */
+      --panel-width: 320px;
+      --error-color: #d9534f;
+      --success-color: #5cb85c;
+      --info-color: #5bc0de;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body { font-family: 'Roboto', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; line-height: 1.6;}
     img { max-width: 100%; height: auto; display: block;}
+
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     header { background: var(--primary); color: #fff; padding: 1rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
     header h1 { font-size: 1.5rem; margin: 0; }
@@ -30,19 +35,24 @@
     header nav ul li a, header nav ul li button { color: #fff; text-decoration: none; font-weight: bold; cursor: pointer; background: none; border: none; font-size: 1rem; font-family: inherit; transition: opacity 0.2s ease-in-out; }
     header nav ul li a:hover, header nav ul li button:hover { opacity: 0.8; }
     header nav ul li button { display: flex; align-items: center; gap: 5px; }
+
     .cart-button-wrapper { position: relative; display: inline-block; }
     .cart-count { position: absolute; top: -8px; right: -12px; background: var(--accent); color: var(--primary); border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; font-weight: bold; min-width: 20px; text-align: center; line-height: 1.2; }
+    
     .hero { background: url('https://via.placeholder.com/1200x600?text=Erishipping+Surprise') no-repeat center/cover; background-color: #555; height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; position: relative; padding: 1rem; }
     .hero::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); z-index: 0; }
     .hero > * { z-index: 1; }
+    /* CHANGED: Updated hero text */
     .hero h2 { font-size: 2.5rem; margin-bottom: 1.5rem; }
     .hero .cta .btn { background: var(--accent); color: var(--primary); border: none; padding: 0.75rem 1.5rem; border-radius: 5px; cursor: pointer; transition: background 0.3s ease-in-out; font-size: 1.1rem; font-weight: bold;}
     .hero .cta .btn:hover { background: #ffe066; }
+
     .books-section { padding: 2rem 1rem; max-width: 1200px; margin: auto; }
     #booksError { color: var(--error-color); text-align: center; margin-bottom: 1rem; font-weight: bold; }
     .books-header { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
     .books-header h2 { font-size: 2rem; color: var(--primary); }
     .books-header input { width: 100%; max-width: 400px; padding: 0.75rem 1rem; border: 1px solid #ccc; border-radius: 25px; font-size: 1rem; }
+
     .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1.5rem; }
     .books-grid p { text-align: center; grid-column: 1 / -1; }
     .book-card { background: var(--card-bg); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden; transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; cursor: pointer; }
@@ -56,6 +66,8 @@
     .book-info .add-btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer; flex-shrink: 0; transition: background 0.3s ease-in-out; font-size: 0.9rem;}
     .book-info .add-btn:hover:not(:disabled) { background: var(--secondary); }
     .book-info .add-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
+
+    /* Cart panel */
     .cart-panel { position: fixed; top: 0; right: calc(-1 * var(--panel-width) - 10px); width: var(--panel-width); max-width: 95vw; height: 100%; background: var(--card-bg); box-shadow: -4px 0 12px rgba(0,0,0,0.3); transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2000; display: flex; flex-direction: column; }
     .cart-panel.open { right: 0; }
     .cart-header { padding: 1rem; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
@@ -75,27 +87,58 @@
     .cart-item .item-controls .remove-btn { background: #fdd; color: var(--error-color); border-color: var(--error-color); font-weight: bold;}
     .cart-item .item-controls .remove-btn:hover { background: #fcc; }
     .cart-item .item-qty { padding: 0 0.5rem; font-weight: bold; min-width: 25px; text-align: center; font-size: 1rem;}
+
     .cart-footer { padding: 1rem; border-top: 1px solid #ddd; flex-shrink: 0; background: #fff; }
     .cart-footer p { margin-bottom: 1rem; font-weight: bold; font-size: 1.1rem; }
-    .cart-footer .checkout-btn { width: 100%; padding: 0.75rem; font-size: 1.1rem; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s ease-in-out; font-weight: bold; }
-    .cart-footer .checkout-btn:hover:not(:disabled) { background: var(--secondary); }
-    .cart-footer .checkout-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
-    #checkout-status { margin-top: 1rem; font-weight: bold; text-align: center;}
+    /* CHANGED: Styles for the new checkout button link */
+    .cart-footer .checkout-btn-link { 
+        display: block; /* Make the link fill the width */
+        width: 100%; 
+        padding: 0.75rem; 
+        font-size: 1.1rem; 
+        background: var(--primary); 
+        color: white; 
+        border: none; 
+        border-radius: 5px; 
+        cursor: pointer; 
+        transition: background 0.3s ease-in-out; 
+        font-weight: bold;
+        text-align: center;
+        text-decoration: none;
+    }
+    .cart-footer .checkout-btn-link:hover { background: var(--secondary); }
+    .cart-footer .checkout-btn-link.disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; pointer-events: none; }
+    #checkout-info { margin-top: 1rem; font-size: 0.9rem; color: #555; text-align: center; }
+
     .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); opacity: 0; visibility: hidden; transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out; z-index: 1500; }
     .overlay.show { opacity: 1; visibility: visible; }
     a:focus, button:focus, input:focus { outline: none; box-shadow: 0 0 0 3px var(--secondary); border-color: var(--secondary); }
-    .footer { background-color: #111; color: #ddd; padding: 25px 15px; font-family: Arial, sans-serif; margin-top: 3rem; }
-    .footer-container { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 30px; max-width: 1000px; margin: auto; }
-    .footer-col { flex: 1 1 220px; }
-    .footer-col h4 { color: #fff; margin-bottom: 12px; font-size: 17px; border-bottom: 1px solid #444; padding-bottom: 5px;}
-    .footer-col p, .footer-col ul, .footer-col a { color: #bbb; font-size: 14px; text-decoration: none; line-height: 1.6; }
-    .footer-col ul { list-style: none; padding: 0; }
-    .footer-col ul li { margin-bottom: 8px; }
-    .footer-col a:hover { color: #fff; text-decoration: underline; }
-    .social-icons a { font-size: 18px; margin-right: 10px; color: #bbb; transition: color 0.2s;}
-    .social-icons a:hover { color: #fff; }
-    .footer-bottom { text-align: center; margin-top: 25px; border-top: 1px solid #333; padding-top: 15px; font-size: 13px; color: #999; }
-    .footer-bottom strong { color: #fff; }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.2rem; }
+      header nav ul { gap: 1rem; }
+      .hero h2 { font-size: 2rem; }
+      .books-grid { grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); }
+      .book-card img { height: 200px; }
+      .cart-panel { width: 95vw; --panel-width: 95vw; }
+      .cart-item { flex-direction: column; align-items: flex-start; }
+      .cart-item img { margin-bottom: 0.5rem;}
+      .cart-item .item-info { margin-right: 0; margin-bottom: 0.5rem; }
+      .cart-item .item-controls { width: 100%; justify-content: space-between; }
+    }
+
+  .footer { background-color: #111; color: #ddd; padding: 25px 15px; font-family: Arial, sans-serif; margin-top: 3rem; }
+  .footer-container { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 30px; max-width: 1000px; margin: auto; }
+  .footer-col { flex: 1 1 220px; }
+  .footer-col h4 { color: #fff; margin-bottom: 12px; font-size: 17px; border-bottom: 1px solid #444; padding-bottom: 5px;}
+  .footer-col p, .footer-col ul, .footer-col a { color: #bbb; font-size: 14px; text-decoration: none; line-height: 1.6; }
+  .footer-col ul { list-style: none; padding: 0; }
+  .footer-col ul li { margin-bottom: 8px; }
+  .footer-col a:hover { color: #fff; text-decoration: underline; }
+  .social-icons a { font-size: 18px; margin-right: 10px; color: #bbb; transition: color 0.2s;}
+  .social-icons a:hover { color: #fff; }
+  .footer-bottom { text-align: center; margin-top: 25px; border-top: 1px solid #333; padding-top: 15px; font-size: 13px; color: #999; }
+  .footer-bottom strong { color: #fff; }
   </style>
 </head>
 <body>
@@ -116,7 +159,7 @@
 
   <main>
     <div class="hero">
-      <h2>Your Next Favorite Surprise, Delivered</h2>
+        <h2>Your Next Favorite Surprise, Delivered</h2>
       <div class="cta"><button class="btn" onclick="scrollToElement('books')">Shop Now</button></div>
     </div>
 
@@ -144,19 +187,46 @@
     <div class="cart-footer">
       <p>Total: $<span id="cartTotal">0.00</span></p>
       
-      <button class="checkout-btn" id="checkoutBtn" disabled>
+      <a href="#" class="checkout-btn-link disabled" id="checkoutBtnLink" target="_blank" rel="noopener noreferrer">
         Proceed to Checkout
-      </button>
+      </a>
       
-      <p id="checkout-status"></p>
+      <p id="checkout-info">You will be redirected to our secure Stripe checkout page.</p>
     </div>
 </aside>
 
   <footer class="footer">
-    </footer>
+    <div class="footer-container">
+      <div class="footer-col about">
+        <h4>About Erishipping Surprise</h4>
+        <p>We curate the finest surprise packages, books, and gifts—celebrating culture, history, and heritage.</p>
+      </div>
+      <div class="footer-col links">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="#books">Browse Products</a></li>
+          <li><a href="#footer-contact">Contact Us</a></li>
+          <li><a href="admin.html">Admin Panel</a></li>
+        </ul>
+      </div>
+      <div class="footer-col contact" id="footer-contact">
+        <h4>Connect With Us</h4>
+        <p>Email: <a href="mailto:contact@erishipping.com">contact@erishipping.com</a></p>
+        <div class="social-icons">
+          <a href="#" aria-label="Facebook" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" aria-label="Twitter" title="Twitter"><i class="fab fa-twitter"></i></a>
+          <a href="#" aria-label="Instagram" title="Instagram"><i class="fab fa-instagram"></i></a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+        <p>&copy; <span id="currentYear"></span> <strong>Erishipping Surprise</strong>. All rights reserved.</p>
+    </div>
+  </footer>
 
   <script>
 // --- Firebase Configuration ---
+// Ensure your Firebase security rules are properly configured to protect your data.
 const firebaseConfig = {
     apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0", // Replace with your actual API Key
     authDomain: "eritrean-bookstore.firebaseapp.com",
@@ -166,33 +236,42 @@ const firebaseConfig = {
     appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
 };
 
-// --- Initialize Firebase & Stripe ---
-let app, db, functions, stripe;
+// --- Initialize Firebase ---
+let app, db;
 try {
+    if (typeof firebase === 'undefined' || typeof firebase.initializeApp !== 'function') {
+        throw new Error("Firebase SDK not loaded.");
+    }
     app = firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-    // ADDED: Initialize Firebase Functions
-    functions = firebase.functions();
-
-    // ADDED: Initialize Stripe.js with your PUBLISHABLE key
-    stripe = Stripe("pk_test_YOUR_STRIPE_PUBLISHABLE_KEY");
-
 } catch (error) {
-    console.error("CRITICAL: Initialization Error:", error);
-    document.body.innerHTML = `<p style="color: red; padding: 20px;"><b>Application Initialization Failed.</b></p>`;
+    console.error("CRITICAL: Firebase Initialization Error:", error);
+    const body = document.querySelector('body');
+    if (body) {
+        body.innerHTML = `<p style="color: red; padding: 20px; font-family: sans-serif;"><b>Application Initialization Failed.</b><br>Could not initialize Firebase. Please check the browser console for details.</p>`;
+    }
 }
 
 // --- Constants ---
 const BOOKS_COLLECTION = 'books';
 const DEBOUNCE_DELAY = 300;
 
+// --- IMPORTANT: Paste your Stripe Payment Link here! ---
+// This link should be for a "Customer chooses what to pay" product.
+const STRIPE_PAYMENT_LINK_URL = "https://buy.stripe.com/PASTE_YOUR_LINK_HERE";
+
+
 // --- Global State ---
 let allBooks = [];
 let cart = Array.isArray(JSON.parse(localStorage.getItem('cart'))) ? JSON.parse(localStorage.getItem('cart')) : [];
 let searchTimeout;
 
+
+// --- REMOVED: Stripe Initialization is no longer needed on this page ---
+
+
 // --- DOM Element Caching ---
-let booksGrid, searchInput, cartPanel, cartOverlay, cartItemsContainer, cartTotalEl, cartCountEl, checkoutBtn, checkoutStatusEl, cartToggleButton, cartCloseButton, booksErrorEl;
+let booksGrid, searchInput, cartPanel, cartOverlay, cartItemsContainer, cartTotalEl, cartCountEl, checkoutBtnLink, cartToggleButton, cartCloseButton, booksErrorEl, currentYearEl;
 
 function cacheDOMElements() {
     booksGrid = document.getElementById('booksGrid');
@@ -202,83 +281,300 @@ function cacheDOMElements() {
     cartItemsContainer = document.getElementById('cartItems');
     cartTotalEl = document.getElementById('cartTotal');
     cartCountEl = document.getElementById('cart-count');
-    checkoutBtn = document.getElementById('checkoutBtn');
-    checkoutStatusEl = document.getElementById('checkout-status');
+    // CHANGED: Caching the new checkout link element
+    checkoutBtnLink = document.getElementById('checkoutBtnLink');
     cartToggleButton = document.getElementById('cartToggleButton');
     cartCloseButton = document.getElementById('cartCloseButton');
     booksErrorEl = document.getElementById('booksError');
+    currentYearEl = document.getElementById('currentYear');
+
+    if (!booksGrid || !searchInput || !cartPanel || !checkoutBtnLink || !cartToggleButton) {
+        console.error("Essential application DOM elements are missing. Functionality will be limited.");
+    }
 }
 
-// --- Main Checkout Logic ---
-async function handleCheckout() {
-    if (cart.length === 0) {
-        alert("Your cart is empty.");
+// --- Utility Functions ---
+function scrollToElement(id) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function toggleCart() {
+    if (!cartPanel || !cartOverlay) {
+        console.error("Cart panel or overlay element not found.");
         return;
     }
-    
-    // Disable button and show status
-    checkoutBtn.disabled = true;
-    checkoutStatusEl.textContent = "Processing...";
-    checkoutStatusEl.style.color = "var(--info-color)";
+    const isOpen = cartPanel.classList.contains('open');
+    cartPanel.classList.toggle('open');
+    cartOverlay.classList.toggle('show');
 
-    try {
-        // Prepare cart data (send only what's necessary)
-        const cartData = cart.map(item => ({
-            id: item.id,
-            quantity: item.quantity
-        }));
-
-        // Call the Firebase Cloud Function
-        const createCheckoutSession = functions.httpsCallable('createCheckoutSession');
-        const result = await createCheckoutSession({ cart: cartData });
-
-        // Get the session ID from the function's response
-        const sessionId = result.data.id;
-        
-        // Redirect to Stripe Checkout
-        const { error } = await stripe.redirectToCheckout({
-            sessionId: sessionId,
-        });
-
-        // If redirectToCheckout fails (e.g., network error), handle it
-        if (error) {
-            console.error("Stripe redirect failed:", error);
-            checkoutStatusEl.textContent = `Error: ${error.message}`;
-            checkoutStatusEl.style.color = "var(--error-color)";
-            checkoutBtn.disabled = false;
-        }
-    } catch (error) {
-        console.error("Error calling Cloud Function:", error);
-        checkoutStatusEl.textContent = "An error occurred. Please try again.";
-        checkoutStatusEl.style.color = "var(--error-color)";
-        checkoutBtn.disabled = false;
+    if (!isOpen) {
+        renderCart(); // Re-render cart content when opening
     }
 }
 
-// --- Utility & Cart Functions (Mostly Unchanged) ---
-// (The helper functions like toggleCart, saveCart, fetchBooks, renderBooks, addToCart, renderCart etc. remain the same as the previous versions)
 function saveCart() {
-    localStorage.setItem('cart', JSON.stringify(cart));
-    updateCartCount();
-    if(checkoutBtn) checkoutBtn.disabled = cart.length === 0;
+    try {
+        localStorage.setItem('cart', JSON.stringify(cart));
+        updateCartCount();
+        updateCheckoutLink(); // CHANGED: Update the checkout link state
+    } catch (e) {
+        console.error("Error saving cart to localStorage:", e);
+    }
 }
-function updateCartCount() { /* ... unchanged ... */ }
-function toggleCart() { /* ... unchanged ... */ }
-function fetchBooks() { /* ... unchanged ... */ }
-function renderBooks(bookList) { /* ... unchanged ... */ }
-function handleSearch() { /* ... unchanged ... */ }
-function addToCart(bookId, quantityToAdd) { /* ... unchanged ... */ }
-function renderCart() { /* ... unchanged ... */ }
-function updateCartItemQuantity(bookId, change) { /* ... unchanged ... */ }
-function removeFromCart(bookId) { /* ... unchanged ... */ }
-function scrollToElement(id) { /* ... unchanged ... */ }
-function escapeHTML(str) { /* ... unchanged ... */ }
-function debounce(func, delay) { /* ... unchanged ... */ }
+
+function updateCartCount() {
+    if (!cartCountEl) return;
+    const count = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item?.quantity || 0), 0) : 0;
+    cartCountEl.textContent = count;
+}
+
+// CHANGED: New function to enable/disable the checkout link
+function updateCheckoutLink() {
+    if (!checkoutBtnLink) return;
+    if (cart.length > 0) {
+        checkoutBtnLink.classList.remove('disabled');
+        // Check if the user has provided a real link
+        if (STRIPE_PAYMENT_LINK_URL && !STRIPE_PAYMENT_LINK_URL.includes("PASTE_YOUR_LINK_HERE")) {
+            checkoutBtnLink.href = STRIPE_PAYMENT_LINK_URL;
+        } else {
+             checkoutBtnLink.href = '#'; // Prevent navigation if link is not set
+             console.warn("Stripe Payment Link is not configured. Checkout will not work.");
+        }
+    } else {
+        checkoutBtnLink.classList.add('disabled');
+        checkoutBtnLink.href = '#';
+    }
+}
+
+function debounce(func, delay) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(func, delay);
+}
+
+function escapeHTML(str) {
+    if (typeof str !== 'string') return str;
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
+// --- Core Application Logic ---
+async function fetchBooks() {
+    if (!booksGrid || !booksErrorEl) {
+        console.error("Missing booksGrid or booksErrorEl for fetchBooks.");
+        return;
+    }
+    booksErrorEl.textContent = '';
+    booksGrid.innerHTML = '<p>Loading products...</p>';
+    try {
+        if (!db) throw new Error("Firestore database is not initialized.");
+        const snapshot = await db.collection(BOOKS_COLLECTION).orderBy('title').get();
+        if (snapshot.empty) {
+            booksGrid.innerHTML = '<p>No products found in the collection.</p>';
+            allBooks = [];
+        } else {
+            allBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            allBooks = allBooks.map(book => ({
+                ...book,
+                stock: typeof book.stock === 'number' && book.stock >= 0 ? book.stock : 0,
+                price: typeof book.price === 'number' && book.price >= 0 ? book.price : 0.00
+            }));
+        }
+        renderBooks(allBooks);
+    } catch (error) {
+        console.error("Error fetching products:", error);
+        booksErrorEl.textContent = 'Failed to load products. Please check connection or Firestore configuration/rules.';
+        booksGrid.innerHTML = '';
+        allBooks = [];
+    }
+}
+
+function renderBooks(bookList) {
+    if (!booksGrid || !searchInput || !booksErrorEl) return;
+
+    booksGrid.innerHTML = '';
+    if (!Array.isArray(bookList) || bookList.length === 0) {
+        const searchTerm = searchInput.value.trim().toLowerCase();
+        if (searchTerm !== '') {
+            booksGrid.innerHTML = '<p>No products match your search.</p>';
+        } else {
+            booksGrid.innerHTML = '<p>No products available at the moment.</p>';
+        }
+        return;
+    }
+
+    bookList.forEach(book => {
+        const card = document.createElement('div');
+        card.className = 'book-card';
+        const title = escapeHTML(book.title || 'Untitled Product');
+        const stock = book.stock;
+        const price = book.price;
+        const imgURL = escapeHTML(book.imgURL || 'https://via.placeholder.com/200x250?text=Product+Image');
+        const isOutOfStock = stock <= 0;
+
+        card.innerHTML = `
+            <img src="${imgURL}" alt="Cover image for ${title}" loading="lazy">
+            <div class="book-info">
+                <div>
+                    <h3>${title}</h3>
+                    <p>$${price.toFixed(2)}</p>
+                    ${isOutOfStock ? '<p style="color: var(--error-color); font-weight: bold; font-size: 0.9rem;">Out of Stock</p>' : `<p>In Stock: ${stock}</p>`}
+                </div>
+                <div class="controls">
+                    <label for="qty-${escapeHTML(book.id)}" class="sr-only">Quantity for ${title}</label>
+                    <input type="number" min="1" max="${stock}" value="1" class="qty" id="qty-${escapeHTML(book.id)}" aria-label="Quantity for ${title}" ${isOutOfStock ? 'disabled' : ''}>
+                    <button class="add-btn" data-book-id="${escapeHTML(book.id)}" ${isOutOfStock ? 'disabled' : ''}>
+                        ${isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                    </button>
+                </div>
+            </div>`;
+        booksGrid.appendChild(card);
+    });
+}
+
+function handleSearch() {
+    if (!searchInput) return;
+    const query = searchInput.value.toLowerCase().trim();
+    const filteredBooks = allBooks.filter(book =>
+        book.title && typeof book.title === 'string' && book.title.toLowerCase().includes(query)
+    );
+    renderBooks(filteredBooks);
+}
+
+function addToCart(bookId, quantityToAdd) {
+    const book = allBooks.find(b => b.id === bookId);
+    if (!book || typeof book.price !== 'number' || typeof book.stock !== 'number') {
+        alert("Error: Could not add item. Product data is missing or invalid.");
+        return;
+    }
+    if (book.stock <= 0) {
+        alert(`"${book.title || 'This item'}" is out of stock.`);
+        renderBooks(allBooks);
+        return;
+    }
+
+    const quantity = parseInt(quantityToAdd, 10);
+    if (isNaN(quantity) || quantity < 1) {
+        alert("Please enter a valid positive quantity.");
+        const qtyInput = document.getElementById(`qty-${escapeHTML(bookId)}`);
+        if (qtyInput) qtyInput.value = '1';
+        return;
+    }
+
+    const existingCartItemIndex = cart.findIndex(item => item.id === bookId);
+    let currentCartQty = existingCartItemIndex > -1 ? cart[existingCartItemIndex].quantity : 0;
+    const potentialNewTotalQty = currentCartQty + quantity;
+
+    if (book.stock < potentialNewTotalQty) {
+        alert(`Sorry, only ${book.stock} "${book.title || 'item'}" available. You have ${currentCartQty} in your cart.`);
+        const qtyInput = document.getElementById(`qty-${escapeHTML(bookId)}`);
+        if (qtyInput) qtyInput.value = Math.max(1, book.stock - currentCartQty);
+        return;
+    }
+    if (existingCartItemIndex > -1) {
+        cart[existingCartItemIndex].quantity = potentialNewTotalQty;
+    } else {
+        cart.push({
+            id: bookId,
+            title: book.title,
+            price: book.price,
+            quantity: quantity,
+            imgURL: book.imgURL
+        });
+    }
+    saveCart();
+    
+    const addButton = document.querySelector(`.add-btn[data-book-id="${escapeHTML(bookId)}"]`);
+    if (addButton) {
+        const originalText = addButton.textContent;
+        addButton.textContent = 'Added!';
+        addButton.disabled = true;
+        setTimeout(() => {
+            addButton.textContent = originalText;
+            const updatedItemInCart = cart.find(item => item.id === bookId);
+            const currentStock = allBooks.find(b => b.id === bookId)?.stock ?? 0;
+            if (!updatedItemInCart || updatedItemInCart.quantity < currentStock) {
+                addButton.disabled = false;
+            }
+        }, 1500);
+    }
+}
+
+function renderCart() {
+    if (!cartItemsContainer || !cartTotalEl) return;
+
+    if (cart.length === 0) {
+        cartItemsContainer.innerHTML = '<p>Your cart is empty.</p>';
+        cartTotalEl.textContent = '0.00';
+        return;
+    }
+
+    cartItemsContainer.innerHTML = '';
+    let total = 0;
+    cart.forEach(item => {
+        const itemTotal = (item.price || 0) * (item.quantity || 0);
+        total += itemTotal;
+        const bookInStore = allBooks.find(b => b.id === item.id);
+        const maxStock = bookInStore ? bookInStore.stock : item.quantity;
+
+        const itemEl = document.createElement('div');
+        itemEl.className = 'cart-item';
+        itemEl.innerHTML = `
+            <img src="${escapeHTML(item.imgURL || 'https://via.placeholder.com/50x60')}" alt="${escapeHTML(item.title)}">
+            <div class="item-info">
+                <strong>${escapeHTML(item.title)}</strong>
+                <span>$${(item.price || 0).toFixed(2)} x ${item.quantity} = $${itemTotal.toFixed(2)}</span>
+            </div>
+            <div class="item-controls">
+                <button class="qty-btn" data-id="${escapeHTML(item.id)}" data-change="-1" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
+                <span class="item-qty">${item.quantity}</span>
+                <button class="qty-btn" data-id="${escapeHTML(item.id)}" data-change="1" ${item.quantity >= maxStock ? 'disabled' : ''}>+</button>
+                <button class="remove-btn" data-id="${escapeHTML(item.id)}">&times;</button>
+            </div>
+        `;
+        cartItemsContainer.appendChild(itemEl);
+    });
+    cartTotalEl.textContent = total.toFixed(2);
+}
+
+function updateCartItemQuantity(bookId, change) {
+    const itemIndex = cart.findIndex(item => item.id === bookId);
+    if (itemIndex === -1) return;
+
+    const bookInStore = allBooks.find(b => b.id === bookId);
+    const maxStock = bookInStore ? bookInStore.stock : cart[itemIndex].quantity;
+    const newQuantity = cart[itemIndex].quantity + change;
+
+    if (newQuantity > 0 && newQuantity <= maxStock) {
+        cart[itemIndex].quantity = newQuantity;
+    } else if (newQuantity <= 0) {
+        cart.splice(itemIndex, 1);
+    }
+    saveCart();
+    renderCart(); // Re-render to show changes
+}
+
+function removeFromCart(bookId) {
+    cart = cart.filter(item => item.id !== bookId);
+    saveCart();
+    renderCart();
+}
+
+// --- REMOVED: All functions related to Stripe Elements and backend calls ---
+// - handleCheckout
+// - initializePaymentForm
+// - checkStatus
+// - showMessage
 
 // --- Event Listeners Setup ---
 function setupEventListeners() {
+    // Search input with debounce
     searchInput.addEventListener('input', () => debounce(handleSearch, DEBOUNCE_DELAY));
 
+    // Add to cart (delegated)
     booksGrid.addEventListener('click', (e) => {
         if (e.target.classList.contains('add-btn')) {
             const button = e.target;
@@ -286,15 +582,17 @@ function setupEventListeners() {
             const card = button.closest('.book-card');
             const qtyInput = card.querySelector('.qty');
             if (bookId && qtyInput) {
-                addToCart(bookId, parseInt(qtyInput.value, 10));
+                addToCart(bookId, qtyInput.value);
             }
         }
     });
 
+    // Cart toggling
     cartToggleButton.addEventListener('click', toggleCart);
     cartCloseButton.addEventListener('click', toggleCart);
     cartOverlay.addEventListener('click', toggleCart);
 
+    // Cart item controls (delegated)
     cartItemsContainer.addEventListener('click', (e) => {
         const target = e.target;
         if (target.classList.contains('qty-btn')) {
@@ -307,19 +605,33 @@ function setupEventListeners() {
         }
     });
     
-    // ADDED: Event listener for the new checkout button
-    checkoutBtn.addEventListener('click', handleCheckout);
+    // REMOVED: Event listener for old checkout button
 }
 
 // --- Application Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     cacheDOMElements();
-    if (db && stripe && functions) {
-        fetchBooks();
-        setupEventListeners();
-        updateCartCount();
-        if(checkoutBtn) checkoutBtn.disabled = cart.length === 0;
+    if (currentYearEl) {
+        currentYearEl.textContent = new Date().getFullYear();
     }
+    
+    if (STRIPE_PAYMENT_LINK_URL.includes("PASTE_YOUR_LINK_HERE")) {
+        console.error("CRITICAL: You must set your Stripe Payment Link in the STRIPE_PAYMENT_LINK_URL constant for checkout to work.");
+        if (checkoutBtnLink) {
+            checkoutBtnLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                alert("Checkout is not configured. Please contact support.");
+            });
+        }
+    }
+
+    if (db) {
+        fetchBooks();
+    }
+    
+    setupEventListeners();
+    updateCartCount();
+    updateCheckoutLink(); // Initial check for the checkout link state
 });
   </script>
 </body>
