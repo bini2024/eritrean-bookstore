@@ -5,14 +5,13 @@ import { getFirestore, collection, getDocs, query, orderBy } from "https://www.g
 // --- Firebase Configuration ---
 // PASTE YOUR NEW CONFIG OBJECT HERE
 const firebaseConfig = {
-  apiKey: "AIza...PASTE_YOUR_NEW_KEY_HERE",
+  apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
   authDomain: "eritrean-bookstore.firebaseapp.com",
   projectId: "eritrean-bookstore",
-  storageBucket: "eritrean-bookstore.appspot.com",
+  storageBucket: "eritrean-bookstore.firebasestorage.app",
   messagingSenderId: "645911365846",
   appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
 };
-
 // --- Stripe Configuration ---
 // ⬇️ 1. PASTE YOUR NEW $0.01 PRODUCT PAYMENT LINK HERE ⬇️
 const STRIPE_PAYMENT_LINK_URL = "https://buy.stripe.com/PASTE_YOUR_NEW_0.01_LINK_HERE";
