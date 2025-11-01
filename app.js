@@ -1,4 +1,9 @@
+// --- NEW: Import functions directly ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
 // --- Firebase Configuration ---
+// ⬇️ 1. PASTE YOUR NEW FIREBASE CONFIG OBJECT HERE ⬇️
 const firebaseConfig = {
   apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
   authDomain: "eritrean-bookstore.firebaseapp.com",
@@ -8,16 +13,9 @@ const firebaseConfig = {
   appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
 };
 
-
 // --- Stripe Configuration ---
-// PASTE YOUR NEW STRIPE PAYMENT LINK (FROM STEP 2) HERE
+// ⬇️ 2. PASTE YOUR STRIPE PAYMENT LINK HERE ⬇️
 const STRIPE_PAYMENT_LINK_URL = "https://buy.stripe.com/PASTE_YOUR_LINK_HERE";
-
-
-// --- Global Imports (from the scripts in index.html) ---
-const { initializeApp } = firebase.app;
-const { getFirestore, collection, getDocs, query, orderBy } = firebase.firestore;
-
 
 // --- Initialize Firebase ---
 let app, db;
