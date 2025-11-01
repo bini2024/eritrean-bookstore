@@ -1,13 +1,13 @@
 // --- Firebase Configuration ---
-// PASTE YOUR NEW CONFIG OBJECT (FROM STEP 1) HERE
 const firebaseConfig = {
-  apiKey: "AIza...PASTE_YOUR_NEW_KEY_HERE",
+  apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
   authDomain: "eritrean-bookstore.firebaseapp.com",
   projectId: "eritrean-bookstore",
-  storageBucket: "eritrean-bookstore.appspot.com",
+  storageBucket: "eritrean-bookstore.firebasestorage.app",
   messagingSenderId: "645911365846",
   appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
 };
+
 
 // --- Stripe Configuration ---
 // PASTE YOUR NEW STRIPE PAYMENT LINK (FROM STEP 2) HERE
