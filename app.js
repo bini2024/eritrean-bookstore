@@ -3,19 +3,19 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebas
 import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 // --- Firebase Configuration ---
-// ⬇️ 1. PASTE YOUR NEW FIREBASE CONFIG OBJECT HERE ⬇️
+// PASTE YOUR NEW CONFIG OBJECT HERE
 const firebaseConfig = {
-  apiKey: "AIzaSyBE3_ivAE2WFXQ3H8m1OWqM9APvRrI-Ac0",
+  apiKey: "AIza...PASTE_YOUR_NEW_KEY_HERE",
   authDomain: "eritrean-bookstore.firebaseapp.com",
   projectId: "eritrean-bookstore",
-  storageBucket: "eritrean-bookstore.firebasestorage.app",
+  storageBucket: "eritrean-bookstore.appspot.com",
   messagingSenderId: "645911365846",
   appId: "1:645911365846:web:5cd71799c6969bcaa1a177"
 };
 
 // --- Stripe Configuration ---
-// ⬇️ 2. PASTE YOUR STRIPE PAYMENT LINK HERE ⬇️
-const STRIPE_PAYMENT_LINK_URL = "https://buy.stripe.com/PASTE_YOUR_LINK_HERE";
+// ⬇️ 1. PASTE YOUR NEW $0.01 PRODUCT PAYMENT LINK HERE ⬇️
+const STRIPE_PAYMENT_LINK_URL = "https://buy.stripe.com/PASTE_YOUR_NEW_0.01_LINK_HERE";
 
 // --- Initialize Firebase ---
 let app, db;
@@ -62,6 +62,13 @@ function cacheDOMElements() {
 }
 
 // --- Utility Functions ---
+
+// ⬇️ 2. NEW HELPER FUNCTION ⬇️
+function calculateCartTotal() {
+  // Recalculates the total price from the cart array
+  return cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
+}
+
 function scrollToElement(id) {
   const element = document.getElementById(id);
   if (element) {
@@ -87,7 +94,7 @@ function saveCart() {
   try {
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartCount();
-    updateCheckoutLink();
+    updateCheckoutLink(); // This will now also update the price
   } catch (e) {
     console.error("Error saving cart to localStorage:", e);
   }
@@ -99,13 +106,27 @@ function updateCartCount() {
   cartCountEl.textContent = count;
 }
 
+// ⬇️ 3. UPDATED THIS FUNCTION ⬇️
 function updateCheckoutLink() {
   if (!checkoutBtnLink) return;
-  if (cart.length > 0) {
+
+  const total = calculateCartTotal(); // Get the current total
+
+  if (total > 0 && cart.length > 0) {
     checkoutBtnLink.classList.remove('disabled');
+    
     // Check if the user has provided a real link
     if (STRIPE_PAYMENT_LINK_URL && !STRIPE_PAYMENT_LINK_URL.includes("PASTE_YOUR_LINK_HERE")) {
-      checkoutBtnLink.href = STRIPE_PAYMENT_LINK_URL;
+      
+      // --- THIS IS THE NEW LOGIC ---
+      // We convert the price (e.g., $45.20) into cents (e.g., 4520)
+      const totalInCents = Math.round(total * 100);
+      
+      // We pass the total in cents as the 'quantity' for our $0.01 product
+      // ?quantity=4520 means 4520 x $0.01 = $45.20
+      checkoutBtnLink.href = `${STRIPE_PAYMENT_LINK_URL}?quantity=${totalInCents}`;
+      // --- END NEW LOGIC ---
+
     } else {
         checkoutBtnLink.href = '#'; // Prevent navigation if link is not set
         console.warn("Stripe Payment Link is not configured. Checkout will not work.");
@@ -139,7 +160,6 @@ async function fetchBooks() {
   try {
     if (!db) throw new Error("Firestore database is not initialized.");
     
-    // NEW: Modular SDK syntax for querying
     const booksCollection = collection(db, BOOKS_COLLECTION);
     const q = query(booksCollection, orderBy('title'));
     const snapshot = await getDocs(q);
@@ -285,10 +305,10 @@ function renderCart() {
   }
 
   cartItemsContainer.innerHTML = '';
-  let total = 0;
+  const total = calculateCartTotal(); // Use our new function
+  
   cart.forEach(item => {
     const itemTotal = (item.price || 0) * (item.quantity || 0);
-    total += itemTotal;
     const bookInStore = allBooks.find(b => b.id === item.id);
     const maxStock = bookInStore ? bookInStore.stock : item.quantity;
 
@@ -327,12 +347,14 @@ function updateCartItemQuantity(bookId, change) {
   }
   saveCart();
   renderCart(); // Re-render to show changes
+  updateCheckoutLink(); // ⬇️ 4. ADDED THIS CALL ⬇️
 }
 
 function removeFromCart(bookId) {
   cart = cart.filter(item => item.id !== bookId);
   saveCart();
   renderCart();
+  updateCheckoutLink(); // ⬇️ 5. ADDED THIS CALL ⬇️
 }
 
 // --- Event Listeners Setup ---
