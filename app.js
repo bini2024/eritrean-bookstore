@@ -105,32 +105,37 @@ function updateCartCount() {
   cartCountEl.textContent = count;
 }
 
-// ⬇️ 3. UPDATED THIS FUNCTION ⬇️
+// ⬇️ REPLACE the old updateCheckoutLink function with this one ⬇️
+
 function updateCheckoutLink() {
   if (!checkoutBtnLink) return;
 
   const total = calculateCartTotal(); // Get the current total
 
-  if (total > 0 && cart.length > 0) {
+  // CHANGED: Check if total meets Stripe's $0.50 minimum
+  if (total >= 0.50 && cart.length > 0) { 
     checkoutBtnLink.classList.remove('disabled');
     
-    // Check if the user has provided a real link
-    if (STRIPE_PAYMENT_LINK_URL && !STRIPE_PAYMENT_LINK_URL.includes("PASTE_YOUR_LINK_HERE")) {
+    // 1. PASTE YOUR NEW $0.50 LINK in the STRIPE_PAYMENT_LINK_URL constant at the top of this file
+    
+    if (STRIPE_PAYMENT_LINK_URL && !STRIPE_PAYMENT_LINK_URL.includes("https://buy.stripe.com/test_00w5kCaqv66B4Un6Kd3cc01")) {
       
       // --- THIS IS THE NEW LOGIC ---
-      // We convert the price (e.g., $45.20) into cents (e.g., 4520)
-      const totalInCents = Math.round(total * 100);
+      // We divide the total by 0.50 to get the correct quantity.
+      // Math.round() ensures we get a whole number.
+      const quantity = Math.round(total / 0.50);
       
-      // We pass the total in cents as the 'quantity' for our $0.01 product
-      // ?quantity=4520 means 4520 x $0.01 = $45.20
-      checkoutBtnLink.href = `${STRIPE_PAYMENT_LINK_URL}?quantity=${totalInCents}`;
+      // e.g., $45 total / 0.50 = quantity of 90
+      // ?quantity=90 means 90 units x $0.50 = $45.00
+      checkoutBtnLink.href = `${STRIPE_PAYMENT_LINK_URL}?quantity=${quantity}`;
       // --- END NEW LOGIC ---
 
     } else {
-        checkoutBtnLink.href = '#'; // Prevent navigation if link is not set
+        checkoutBtnLink.href = '#'; 
         console.warn("Stripe Payment Link is not configured. Checkout will not work.");
     }
   } else {
+    // It's disabled if cart is empty OR under the $0.50 minimum
     checkoutBtnLink.classList.add('disabled');
     checkoutBtnLink.href = '#';
   }
