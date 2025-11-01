@@ -105,7 +105,7 @@ function updateCartCount() {
   cartCountEl.textContent = count;
 }
 
-// ⬇️ REPLACE the old updateCheckoutLink function with this one ⬇️
+// ⬇️ REPLACE your old function with this new, corrected one ⬇️
 
 function updateCheckoutLink() {
   if (!checkoutBtnLink) return;
@@ -116,9 +116,10 @@ function updateCheckoutLink() {
   if (total >= 0.50 && cart.length > 0) { 
     checkoutBtnLink.classList.remove('disabled');
     
-    // 1. PASTE YOUR NEW $0.50 LINK in the STRIPE_PAYMENT_LINK_URL constant at the top of this file
-    
-    if (STRIPE_PAYMENT_LINK_URL && !STRIPE_PAYMENT_LINK_URL.includes("https://buy.stripe.com/test_00w5kCaqv66B4Un6Kd3cc01")) {
+    // --- THIS IS THE FIX ---
+    // The "!" (NOT) operator has been removed.
+    // We are now checking that the link IS configured, not that it ISN'T.
+    if (STRIPE_PAYMENT_LINK_URL && STRIPE_PAYMENT_LINK_URL.includes("https://buy.stripe.com/test_00w5kCaqv66B4Un6Kd3cc01")) {
       
       // --- THIS IS THE NEW LOGIC ---
       // We divide the total by 0.50 to get the correct quantity.
@@ -131,8 +132,9 @@ function updateCheckoutLink() {
       // --- END NEW LOGIC ---
 
     } else {
+        // This 'else' block will now correctly catch if the link is NOT set
         checkoutBtnLink.href = '#'; 
-        console.warn("Stripe Payment Link is not configured. Checkout will not work.");
+        console.warn("Stripe Payment Link is not configured. Please paste your link at the top of app.js.");
     }
   } else {
     // It's disabled if cart is empty OR under the $0.50 minimum
