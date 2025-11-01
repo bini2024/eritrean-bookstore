@@ -14,7 +14,7 @@ const firebaseConfig = {
 };
 // --- Stripe Configuration ---
 // ⬇️ 1. PASTE YOUR NEW $0.01 PRODUCT PAYMENT LINK HERE ⬇️
-const STRIPE_PAYMENT_LINK_URL = "https://buy.stripe.com/PASTE_YOUR_NEW_0.01_LINK_HERE";
+const STRIPE_PAYMENT_LINK_URL = "https://buy.stripe.com/test_dRmcN4cyD1Ql9aD2tX3cc00";
 
 // --- Initialize Firebase ---
 let app, db;
