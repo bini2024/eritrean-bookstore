@@ -105,23 +105,21 @@ function updateCartCount() {
   cartCountEl.textContent = count;
 }
 
-// ⬇️ REPLACE your old function with this new, corrected one ⬇️
+// ⬇️ REPLACE your old function with this new, more robust one ⬇️
 
 function updateCheckoutLink() {
   if (!checkoutBtnLink) return;
 
   const total = calculateCartTotal(); // Get the current total
 
-  // CHANGED: Check if total meets Stripe's $0.50 minimum
+  // Check if total meets Stripe's $0.50 minimum
   if (total >= 0.50 && cart.length > 0) { 
     checkoutBtnLink.classList.remove('disabled');
     
-    // --- THIS IS THE FIX ---
-    // The "!" (NOT) operator has been removed.
-    // We are now checking that the link IS configured, not that it ISN'T.
-    if (STRIPE_PAYMENT_LINK_URL && STRIPE_PAYMENT_LINK_URL.includes("https://buy.stripe.com/test_00w5kCaqv66B4Un6Kd3cc01")) {
+    // --- THIS IS THE IMPROVED CHECK ---
+    // It just checks that the link is NOT the placeholder.
+    if (STRIPE_PAYMENT_LINK_URL && !STRIPE_PAYMENT_LINK_URL.includes("https://buy.stripe.com/test_00w5kCaqv66B4Un6Kd3cc01")) {
       
-      // --- THIS IS THE NEW LOGIC ---
       // We divide the total by 0.50 to get the correct quantity.
       // Math.round() ensures we get a whole number.
       const quantity = Math.round(total / 0.50);
@@ -129,7 +127,6 @@ function updateCheckoutLink() {
       // e.g., $45 total / 0.50 = quantity of 90
       // ?quantity=90 means 90 units x $0.50 = $45.00
       checkoutBtnLink.href = `${STRIPE_PAYMENT_LINK_URL}?quantity=${quantity}`;
-      // --- END NEW LOGIC ---
 
     } else {
         // This 'else' block will now correctly catch if the link is NOT set
